@@ -1,0 +1,35 @@
+{
+  "stake_currency": "USDT",
+  "exchange": {
+    "pair_whitelist": [
+      "ETH/USDT",
+      "DOGE/USDT",
+      "BTC/USDT",
+      "EOS/USDT",
+      "BUSD/USDT",
+      "XRP/USDT",
+      "ETC/USDT",
+      "ADA/USDT",
+      "LTC/USDT",
+      "XLM/USDT",
+      "BCH/USDT",
+      "RLC/USDT",
+      "DOT/USDT",
+      "REEF/USDT",
+      "LINK/USDT",
+      "MATIC/USDT",
+      "TRX/USDT",
+      "VET/USDT",
+      "YFI/USDT",
+      "EUR/USDT",
+      "SXP/USDT",
+      "BTT/USDT",
+      "ONT/USDT",
+      "THETA/USDT",
+      "USDC/USDT",
+      "NEO/USDT",
+      "OMG/USDT",
+      "CHZ/USDT"
+    ]
+  }
+}
