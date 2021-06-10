@@ -16,7 +16,7 @@ class StrategyKlinger(IStrategy):
 
     # Optimal ticker interval for the strategy.
     timeframe = '5m'
-    informative_timeframe = '1d'
+    informative_timeframe = '4h'
 
     # Run "populate_indicators()" only for new candle.
     process_only_new_candles = False
