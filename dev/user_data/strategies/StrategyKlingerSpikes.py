@@ -1,6 +1,7 @@
 from logging import debug
 from freqtrade.vendor.qtpylib.indicators import typical_price
 from numpy import array
+from mcDuck.custom_indicators import klinger_oscilator
 from scipy.signal import find_peaks
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
@@ -48,7 +49,7 @@ class StrategyKlingerSpikes(IStrategy):
         return informative_pairs
 
     def do_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        [klinger_volume_indicator, signal] = self.klinger(dataframe)
+        [klinger_volume_indicator, signal] = klinger_oscilator(dataframe)
         dataframe["kvo"] = klinger_volume_indicator
         dataframe["ks"] = signal
         # print(find_peaks(klinger_volume_indicator))
