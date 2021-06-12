@@ -1,11 +1,7 @@
-from logging import debug
-from freqtrade.vendor.qtpylib.indicators import typical_price
-from numpy import array
+from mcDuck.custom_indicators import klinger_oscilator, populate_incomplete_candle
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
 from freqtrade.exchange import timeframe_to_minutes
-import numpy
-import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 
 
@@ -36,6 +32,7 @@ class StrategyKlinger(IStrategy):
     # Stoploss:
     stoploss = -100
     # Optional order type mapping.
+    
     order_types = {
         'buy': 'limit',
         'sell': 'limit',
@@ -49,9 +46,7 @@ class StrategyKlinger(IStrategy):
         return informative_pairs
         
     def do_indicators(self, dataframe: DataFrame, metadata: dict)  -> DataFrame:
-        [klinger_volume_indicator, signal] = self.klinger(dataframe)
-        dataframe["kvo"] = klinger_volume_indicator
-        dataframe["ks"] = signal
+        [dataframe["kvo"], dataframe["ks"]] = klinger_oscilator(dataframe)
         return dataframe  
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -60,18 +55,20 @@ class StrategyKlinger(IStrategy):
             assert (timeframe_to_minutes(self.timeframe) <= 5), "Backtest this strategy in 5m or 1m timeframe."
 
         if self.timeframe == self.informative_timeframe:
-            dataframe = self.do_indicators(dataframe, metadata)
-        else:
-            if not self.dp:
-                return dataframe
-            print(metadata['pair'])
-            informative = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.informative_timeframe)
+            ticker = self.dp.ticker(metadata["pair"])
+            populated_dataframe = self.do_indicators(populate_incomplete_candle(dataframe,ticker), metadata)
+            [dataframe["kvo"],dataframe["ks"]] = [populated_dataframe["kvo"],populated_dataframe["ks"]]  
+            return dataframe
 
-            informative = self.do_indicators(informative.copy(), metadata)
+        if not self.dp:
+            return dataframe
+        informative = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.informative_timeframe)
 
-            dataframe = merge_informative_pair(dataframe, informative, self.timeframe, self.informative_timeframe, ffill=True)
-            skip_columns = [(s + "_" + self.informative_timeframe) for s in ['date', 'open', 'high', 'low', 'close', 'volume']]
-            dataframe.rename(columns=lambda s: s.replace("_{}".format(self.informative_timeframe), "") if (not s in skip_columns) else s, inplace=True)
+        informative = self.do_indicators(informative.copy(), metadata)
+
+        dataframe = merge_informative_pair(dataframe, informative, self.timeframe, self.informative_timeframe, ffill=True)
+        skip_columns = [(s + "_" + self.informative_timeframe) for s in ['date', 'open', 'high', 'low', 'close', 'volume']]
+        dataframe.rename(columns=lambda s: s.replace("_{}".format(self.informative_timeframe), "") if (not s in skip_columns) else s, inplace=True)
 
         return dataframe
 
@@ -92,12 +89,3 @@ class StrategyKlinger(IStrategy):
         ),"sell"] = 1        
         return dataframe
 
-    def klinger(self, dataframe: DataFrame) -> array:
-        previous_dataframe = dataframe.shift(1)
-        previous_typical_price = ta.TYPPRICE(previous_dataframe)
-        typical_price = ta.TYPPRICE(dataframe)
-        signal_volume = numpy.where((typical_price - previous_typical_price) >= 0,dataframe["volume"],dataframe["volume"] * -1)
-        klinger_volume_indicator = ta.EMA(signal_volume, timeperiod=34) - ta.EMA(signal_volume, timeperiod=55)
-        signal = ta.EMA(klinger_volume_indicator,13)
-
-        return [klinger_volume_indicator,signal]
