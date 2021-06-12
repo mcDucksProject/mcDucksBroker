@@ -1,4 +1,4 @@
-from mcDuck.custom_indicators import klinger_oscilator
+from mcDuck.custom_indicators import klinger_oscilator, populate_incomplete_candle
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
 from freqtrade.exchange import timeframe_to_minutes
@@ -54,9 +54,10 @@ class StrategyKlinger(IStrategy):
             assert (timeframe_to_minutes(self.timeframe) <= 5), "Backtest this strategy in 5m or 1m timeframe."
 
         if self.timeframe == self.informative_timeframe:
-            return self.do_indicators(dataframe, metadata)
-
-        print(self.dp)
+            ticker = self.dp.ticker(metadata["pair"])
+            populated_dataframe = self.do_indicators(populate_incomplete_candle(dataframe,ticker), metadata)
+            [dataframe["kvo"],dataframe["ks"]] = [populated_dataframe["kvo"],populated_dataframe["ks"]]  
+            return dataframe
 
         if not self.dp:
             return dataframe
