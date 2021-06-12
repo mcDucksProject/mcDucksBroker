@@ -8,6 +8,7 @@ user_data/data/*
 hyperopt.lock
 __pycache__
 plot/*
+config.private.json
 
 # Freqtrade rules
 *.sqlite
