@@ -32,6 +32,7 @@ class StrategyKlinger(IStrategy):
     # Stoploss:
     stoploss = -100
     # Optional order type mapping.
+    
     order_types = {
         'buy': 'limit',
         'sell': 'limit',
