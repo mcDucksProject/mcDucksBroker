@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 class HyperoptMcDuck(IHyperOpt):
 
 
-    @staticmethod
-    def roi_space() -> List[Dimension]:
+    
+    def roi_space(self) -> List[Dimension]:
         """
         Create a ROI space.
 
@@ -43,8 +43,8 @@ class HyperoptMcDuck(IHyperOpt):
         # ranges are needed.
         roi_t_alpha = 1.0
         roi_p_alpha = 1.0
-
-        timeframe_min = timeframe_to_minutes("4h")
+        print(self.strategy.informative_timeframe_buy)
+        timeframe_min = timeframe_to_minutes(self.strategy.informative_timeframe_buy)
 
         # We define here limits for the ROI space parameters automagically adapted to the
         # timeframe used by the bot:

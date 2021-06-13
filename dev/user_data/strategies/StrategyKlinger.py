@@ -29,6 +29,7 @@ class StrategyKlinger(IStrategy):
     minimal_roi = {
         "0": 100
     }
+
     # Stoploss:
     stoploss = -100
     # Optional order type mapping.

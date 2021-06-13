@@ -1,10 +1,8 @@
 {
-  "strategy": "StrategyKlinger",
+  "strategy": "StrategyKlingerHybrid",
   "max_open_trades": 10,
-  "stake_currency": "BTC",
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
-  "dry_run_wallet": 0.00799421,
   "fiat_display_currency": "USD",
   "timeframe": "4h",
   "dry_run": true,
