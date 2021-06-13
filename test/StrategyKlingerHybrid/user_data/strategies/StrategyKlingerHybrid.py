@@ -1,5 +1,4 @@
 import os
-from mcDuck.custom_indicators import klinger_oscilator
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
 from freqtrade.exchange import timeframe_to_minutes
