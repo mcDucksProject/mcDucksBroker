@@ -65,8 +65,8 @@ class StrategyKlingerHybrid(IStrategy):
 
         #Live / dry run
         if self.timeframe == self.informative_timeframe_sell:
-            dataframe_sell = self.do_indicators(dataframe.copy(), metadata)
-            dataframe_buy = self.do_indicators(self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.informative_timeframe_buy), metadata)
+            dataframe_sell = self.do_indicators(self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.informative_timeframe_sell), metadata)
+            dataframe_buy = self.do_indicators(dataframe.copy(), metadata)
             [dataframe["skvo"],dataframe["sks"]] = [dataframe_sell["kvo"],dataframe_sell["ks"]]  
             [dataframe["bkvo"],dataframe["bks"]] = [dataframe_buy["kvo"],dataframe_buy["ks"]]  
             return dataframe
