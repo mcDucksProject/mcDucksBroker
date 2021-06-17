@@ -1,9 +1,13 @@
 import os
-from mcDuck.custom_indicators import klinger_oscilator, populate_incomplete_candle
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
 from freqtrade.exchange import timeframe_to_minutes
 import freqtrade.vendor.qtpylib.indicators as qtpylib
+import freqtrade.vendor.qtpylib.indicators as qtpylib
+from numpy import array, where
+from pandas.core.frame import DataFrame
+from pandas import Timestamp
+import talib.abstract as ta
 
 
 
@@ -60,7 +64,7 @@ class StrategyKlingerHybrid(IStrategy):
             assert (timeframe_to_minutes(self.timeframe) <= 5), "Backtest this strategy in 5m or 1m timeframe."
 
         #Live / dry run
-        if self.timeframe == self.informative_timeframe_sell:
+        if self.timeframe == self.informative_timeframe_buy:
             dataframe_sell = self.do_indicators(self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.informative_timeframe_sell), metadata)
             dataframe_buy = self.do_indicators(dataframe.copy(), metadata)
             [dataframe["skvo"],dataframe["sks"]] = [dataframe_sell["kvo"],dataframe_sell["ks"]]  
@@ -101,3 +105,24 @@ class StrategyKlingerHybrid(IStrategy):
         ),"sell"] = 1        
         return dataframe
 
+def klinger_oscilator(dataframe: DataFrame) -> array:
+    previous_dataframe = dataframe.shift(1)
+    previous_typical_price = ta.TYPPRICE(previous_dataframe)
+    typical_price = ta.TYPPRICE(dataframe)
+    signal_volume = where((typical_price - previous_typical_price) >= 0,
+                        dataframe["volume"], dataframe["volume"] * -1)
+    klinger_volume_indicator = ta.EMA(signal_volume, timeperiod=34) - \
+        ta.EMA(signal_volume, timeperiod=55)
+    signal = ta.EMA(klinger_volume_indicator, 13)
+
+    return [klinger_volume_indicator, signal]
+    
+def populate_incomplete_candle(dataframe: DataFrame, ticker: dict) -> DataFrame:
+    return dataframe.copy().iloc[1:].append({
+        "date" : Timestamp(ticker["timestamp"],unit='ms',tz='UTC', freq='240T'),
+        "open" : ticker["open"],
+        "high" : ticker["high"],
+        "low" : ticker["low"],
+        "close" : ticker["close"],
+        "volume" : ticker["baseVolume"]
+    }, ignore_index=True)
