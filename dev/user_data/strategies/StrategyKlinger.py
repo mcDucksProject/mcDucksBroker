@@ -1,10 +1,14 @@
-from mcDuck.custom_indicators import klinger_oscilator, populate_incomplete_candle
+
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
 from freqtrade.exchange import timeframe_to_minutes
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 
-
+import os
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent))
+from custom_indicators import klinger_oscilator, populate_incomplete_candle
 
 
 class StrategyKlinger(IStrategy):
@@ -29,6 +33,7 @@ class StrategyKlinger(IStrategy):
     minimal_roi = {
         "0": 100
     }
+
     # Stoploss:
     stoploss = -100
     # Optional order type mapping.
