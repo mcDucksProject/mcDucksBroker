@@ -104,9 +104,17 @@ class StrategyKlinger1D4hSupport(IStrategy):
 
     def populate_buy_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         minimum_coin_price = 0.0000015
-        last_day = dataframe.shift(self.shift_value())
+        last_day = dataframe.shift(self.shift_value(self.timeframe_main))
+        last_candle_support_1 = dataframe.shift(self.shift_value(self.timeframe_support))
+        last_candle_support_2 = dataframe.shift(self.shift_value(self.timeframe_support) * 2 )
+        last_candle_support_3 = dataframe.shift(self.shift_value(self.timeframe_support) * 3 )
         dataframe.loc[(
-            (qtpylib.crossed_above(dataframe["support_kvo"], dataframe["support_ks"])) &
+            (
+                qtpylib.crossed_above(dataframe["support_kvo"], dataframe["support_ks"]) | 
+                qtpylib.crossed_above(last_candle_support_1["support_kvo"], last_candle_support_1["support_ks"]) | 
+                qtpylib.crossed_above(last_candle_support_2["support_kvo"], last_candle_support_2["support_ks"]) | 
+                qtpylib.crossed_above(last_candle_support_3["support_kvo"], last_candle_support_3["support_ks"]) 
+            ) &
             ((last_day['main_kvo'] < last_day['main_ks']) &
             (dataframe['main_kvo'] > dataframe['main_ks'])) &
             (dataframe["volume"] > 0) &
@@ -115,14 +123,22 @@ class StrategyKlinger1D4hSupport(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        last_day = dataframe.shift(self.shift_value())
+        last_day = dataframe.shift(self.shift_value(self.timeframe_main))
+        last_candle_support_1 = dataframe.shift(self.shift_value(self.timeframe_support))
+        last_candle_support_2 = dataframe.shift(self.shift_value(self.timeframe_support) * 2 )
+        last_candle_support_3 = dataframe.shift(self.shift_value(self.timeframe_support) * 3 )        
         dataframe.loc[(
-            (qtpylib.crossed_below(dataframe["support_kvo"], dataframe["support_ks"])) &
+            (
+                qtpylib.crossed_below(dataframe["support_kvo"], dataframe["support_ks"]) | 
+                qtpylib.crossed_below(last_candle_support_1["support_kvo"], last_candle_support_1["support_ks"]) | 
+                qtpylib.crossed_below(last_candle_support_2["support_kvo"], last_candle_support_2["support_ks"]) | 
+                qtpylib.crossed_below(last_candle_support_3["support_kvo"], last_candle_support_3["support_ks"]) 
+            ) &
             ((last_day['main_kvo'] > last_day['main_ks']) &
             (dataframe['main_kvo'] < dataframe['main_ks'])) &            
             (dataframe["volume"] > 0)
         ), "sell"] = 1
         return dataframe
 
-    def shift_value(self) -> int:
-        return int(ceil(timeframe_to_minutes(self.timeframe_main) / timeframe_to_minutes(self.timeframe)))
+    def shift_value(self, timeframe: str) -> int:
+        return int(ceil(timeframe_to_minutes(timeframe) / timeframe_to_minutes(self.timeframe)))
