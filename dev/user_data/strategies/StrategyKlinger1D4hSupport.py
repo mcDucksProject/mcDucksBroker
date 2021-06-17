@@ -115,7 +115,6 @@ class StrategyKlinger1D4hSupport(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        shift_quantity = 1+ int(ceil(timeframe_to_minutes(self.timeframe_main) / timeframe_to_minutes(self.timeframe)))
         last_day = dataframe.shift(self.shift_value())
         dataframe.loc[(
             (qtpylib.crossed_below(dataframe["support_kvo"], dataframe["support_ks"])) &
