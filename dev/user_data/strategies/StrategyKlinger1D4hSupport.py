@@ -61,10 +61,6 @@ class StrategyKlinger1D4hSupport(IStrategy):
                             [(pair, self.timeframe_support) for pair in pairs]
         return informative_pairs
 
-    def do_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        [dataframe["kvo"], dataframe["ks"]] = klinger_oscilator(dataframe)
-        return dataframe
-
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
 
         if self.config['runmode'].value in ('backtest', 'hyperopt'):
