@@ -10,7 +10,7 @@
       "rateLimit": 200
     },
     //"pair_whitelist" : [
-    //    ".*/BTC"
+        //".*/BTC"
     //],
     "pair_blacklist": [
       ".*DOWN/BTC",

@@ -36,12 +36,27 @@ class StrategyKlinger1D4hSupport(IStrategy):
     startup_candle_count: int = 55
 
     # ROI table:
-    # minimal_roi = {
-    #    "0": 0.545,
-    #    "1564": 0.328,
-    #    "4110": 0.121,
-    #    "6891": 0
-    # }
+    """
+    minimal_roi = {
+        "0": 0.704,
+        "1886": 0.219,
+        "4355": 0.094,
+        "7353": 0
+    }
+
+    # Stoploss:
+    stoploss = -0.07
+    """
+    # ROI table:
+    """
+    minimal_roi = {
+        '0': 0.05,
+        '480': 0.025,
+        '960': 0.012,
+        '1440': 0
+    }
+    """
+    
     minimal_roi = {
         "0": 100
     }
