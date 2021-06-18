@@ -11,7 +11,7 @@ import os
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
-from custom_indicators import klinger_oscilator, populate_incomplete_candle
+from custom_indicators import klinger_oscilator, merge_dataframes
 
 """
 Buys when the 1D Klinger and de 4H Klinger crosses
@@ -21,15 +21,15 @@ class StrategyKlinger1D4hSupport(IStrategy):
 
     # Optimal ticker interval for the strategy.
     timeframe = '5m'
-    timeframe_main = '1d'
-    timeframe_support = '4h'
+    timeframe_main = '4h'
+    timeframe_support = '1d'
 
     # Run "populate_indicators()" only for new candle.
     process_only_new_candles = False
 
     # These values can be overridden in the "ask_strategy" section in the config.
     use_sell_signal = True
-    sell_profit_only = True
+    sell_profit_only = False
     ignore_roi_if_buy_signal = False
     ignore_buying_expired_candle_after = 360
     # Number of candles the strategy requires before producing valid signals
@@ -77,7 +77,6 @@ class StrategyKlinger1D4hSupport(IStrategy):
         return informative_pairs
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-
         if self.config['runmode'].value in ('backtest', 'hyperopt'):
             assert (timeframe_to_minutes(self.timeframe) <=
                     5), "Backtest this strategy in 5m or 1m timeframe."
@@ -97,7 +96,7 @@ class StrategyKlinger1D4hSupport(IStrategy):
             klinger_oscilator(dataframe_main)
         [dataframe_support["support_kvo"], dataframe_support["support_ks"]] = \
             klinger_oscilator(dataframe_support)
-
+        
         dataframe = merge_dataframes(
             source=dataframe_main,
             sourceTimeframe=self.timeframe_main,

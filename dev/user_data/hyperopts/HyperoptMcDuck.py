@@ -43,8 +43,7 @@ class HyperoptMcDuck(IHyperOpt):
         # ranges are needed.
         roi_t_alpha = 1.0
         roi_p_alpha = 1.0
-        print(self.strategy.timeframe_support)
-        timeframe_min = timeframe_to_minutes(self.strategy.timeframe_support)
+        timeframe_min = timeframe_to_minutes(self.strategy.timeframe_main)
 
         # We define here limits for the ROI space parameters automagically adapted to the
         # timeframe used by the bot:

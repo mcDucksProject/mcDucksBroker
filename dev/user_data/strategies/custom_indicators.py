@@ -1,3 +1,4 @@
+from freqtrade import data
 from numpy import array, where
 from pandas.core.frame import DataFrame
 from pandas import Timestamp
