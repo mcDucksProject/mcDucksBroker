@@ -39,14 +39,14 @@ class StrategyKlingerStoch(IStrategy):
 
     # ROI table:
     minimal_roi = {
-        "0": 0.61,
-        "6160": 0.193,
-        "10778": 0.105,
-        "31384": 0
+        "0": 0.593,
+        "1469": 0.153,
+        "2722": 0.098,
+        "5246": 0
     }
 
     # Stoploss:
-    stoploss = -0.02
+    stoploss = -0.023
     # Trailing stop:
 
     def informative_pairs(self):
