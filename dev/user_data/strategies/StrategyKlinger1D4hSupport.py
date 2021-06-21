@@ -1,11 +1,9 @@
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 from numpy import ceil
-import talib.abstract as ta
-from freqtrade import data
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.strategy import IStrategy
 from pandas.core.frame import DataFrame
-from mcDuck import klinger_oscilator, merge_dataframes
+from mcDuck.custom_indicators import klinger_oscilator, merge_dataframes
 
 """
 Buys when the 1D Klinger and de 4H Klinger crosses
