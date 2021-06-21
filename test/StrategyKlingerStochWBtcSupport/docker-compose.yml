@@ -11,11 +11,11 @@ services:
       #context: .
       #dockerfile: "./docker/Dockerfile.custom"
     restart: unless-stopped
-    container_name: StrategyKlingerStochWBtcSupport
+    container_name: StrategyKlingerStochWBtc
     volumes:
       - "./user_data:/freqtrade/user_data"
       - "../../dev/user_data/strategies:/freqtrade/user_data/strategies"
-      - "../../dev/mcDuck:/freqtrade/mcDuck"     
+      - "../../dev/mcDuck:/freqtrade/mcDuck"      
     # Expose api on port 8080 (localhost only)
     # Please read the https://www.freqtrade.io/en/latest/rest-api/ documentation
     # before enabling this.
