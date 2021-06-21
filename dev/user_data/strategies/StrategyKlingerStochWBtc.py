@@ -52,7 +52,7 @@ class StrategyKlingerStochWBtc(IStrategy):
         pairs = self.dp.current_whitelist()
         informative_pairs = [(pair, self.timeframe_main) for pair in pairs] + \
                             [(pair, self.timeframe_support) for pair in pairs]
-        informative_pairs.append("BTC/USDT")
+        informative_pairs.append(["BTC/USDT",self.timeframe_support])
         return informative_pairs
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
