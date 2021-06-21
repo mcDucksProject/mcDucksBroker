@@ -11,7 +11,7 @@ services:
       #context: .
       #dockerfile: "./docker/Dockerfile.custom"
     restart: unless-stopped
-    container_name: freqtrade_klinger_stoch_usdt
+    container_name: StrategyKlingerStochWBtcSupport
     volumes:
       - "./user_data:/freqtrade/user_data"
       - "../../dev/user_data/strategies:/freqtrade/user_data/strategies"
