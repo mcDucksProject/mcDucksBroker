@@ -1,11 +1,10 @@
 {
-  "strategy": "StrategyKlingerStoch",
+  "strategy": "StrategyKlingerStochWBtc",
   "max_open_trades": 10,
   "stake_currency": "BTC",
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
   "dry_run_wallet": 0.01,
-  "fiat_display_currency": "EUR",
   "timeframe": "4h",
   "dry_run": true,
   "cancel_open_orders_on_exit": true,

@@ -14,6 +14,8 @@ services:
     container_name: freqtrade_klinger_stoch_usdt
     volumes:
       - "./user_data:/freqtrade/user_data"
+      - "../../dev/user_data:/freqtrade/user_data"
+      - "../../dev/mcDuck:/freqtrade/mcDuck"     
     # Expose api on port 8080 (localhost only)
     # Please read the https://www.freqtrade.io/en/latest/rest-api/ documentation
     # before enabling this.

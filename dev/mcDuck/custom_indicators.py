@@ -3,22 +3,33 @@ from numpy import array, where
 from pandas.core.frame import DataFrame
 from pandas import Timestamp
 from freqtrade.strategy import merge_informative_pair
-import talib.abstract as ta
+import talib as ta
+from talib.abstract import SMA, STOCH, RSI, EMA, TYPPRICE
 
 MAIN_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume']
 
 def klinger_oscilator(dataframe: DataFrame) -> array:
     previous_dataframe = dataframe.shift(1)
-    previous_typical_price = ta.TYPPRICE(previous_dataframe)
-    typical_price = ta.TYPPRICE(dataframe)
+    previous_typical_price = TYPPRICE(previous_dataframe)
+    typical_price = TYPPRICE(dataframe)
     signal_volume = where((typical_price - previous_typical_price) >= 0,
                           dataframe["volume"], dataframe["volume"] * -1)
-    klinger_volume_indicator = ta.EMA(signal_volume, timeperiod=34) - \
-        ta.EMA(signal_volume, timeperiod=55)
-    signal = ta.EMA(klinger_volume_indicator, 13)
+    klinger_volume_indicator = EMA(signal_volume, timeperiod=34) - \
+        EMA(signal_volume, timeperiod=55)
+    signal = EMA(klinger_volume_indicator, 13)
 
     return [klinger_volume_indicator, signal]
 
+def stoch_rsi_smooth(dataframe: DataFrame) -> DataFrame:
+    rsi = RSI(dataframe["close"],14)
+    stoch_k, stoch_d = STOCH(rsi,rsi,rsi,
+                            fastk_period=14,slowk_period=3,
+                            slowk_matype=ta.MA_Type.EMA,
+                            slowd_period=3,
+                            slowd_matype=ta.MA_Type.EMA)
+    dataframe["stochk"] = SMA(stoch_k,3)
+    dataframe["stochd"] = SMA(dataframe["stochk"],3)
+    return dataframe
 
 def populate_incomplete_candle(dataframe: DataFrame, ticker: dict) -> DataFrame:
     return dataframe.copy().iloc[1:].append({
@@ -41,5 +52,6 @@ def merge_dataframes(source: DataFrame,
     destination = merge_informative_pair(destination, source, destinationTimeFrame, sourceTimeframe, ffill=True)
     skip_columns = [(s + "_" + sourceTimeframe) for s in MAIN_DATAFRAME_COLUMNS]
     destination.drop(inplace=True,columns=skip_columns)
-    destination.rename(inplace=True,columns=lambda s: s.replace("_{}".format(sourceTimeframe), "") if (not s in skip_columns) else s)
+    destination.rename(inplace=True,columns=lambda s: 
+        s.replace("_{}".format(sourceTimeframe), "") if (not s in skip_columns) else s)
     return destination

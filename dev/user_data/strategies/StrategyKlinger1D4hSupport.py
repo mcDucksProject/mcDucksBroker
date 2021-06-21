@@ -5,13 +5,7 @@ from freqtrade import data
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.strategy import IStrategy
 from pandas.core.frame import DataFrame
-from user_data.strategies.custom_indicators import merge_dataframes
-
-import os
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent))
-from custom_indicators import klinger_oscilator, merge_dataframes
+from mcDuck import klinger_oscilator, merge_dataframes
 
 """
 Buys when the 1D Klinger and de 4H Klinger crosses

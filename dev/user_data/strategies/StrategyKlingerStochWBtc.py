@@ -1,24 +1,18 @@
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 from numpy import ceil
-import talib as ta
-from talib.abstract import SMA, STOCH, RSI
+from pandas.core.series import Series
 from freqtrade import data
 from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.strategy import IStrategy
 from pandas.core.frame import DataFrame
-from user_data.strategies.custom_indicators import merge_dataframes
+from mcDuck.custom_indicators import merge_dataframes, stoch_rsi_smooth, klinger_oscilator
+from functools import reduce
 
-
-import os
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent))
-from custom_indicators import klinger_oscilator, merge_dataframes
 
 """
 Buys when the 1D Klinger and de 4H Klinger crosses
 """
-class StrategyKlingerStoch(IStrategy):
+class StrategyKlingerStochWBtc(IStrategy):
     INTERFACE_VERSION = 2
 
     # Optimal ticker interval for the strategy.
@@ -39,19 +33,26 @@ class StrategyKlingerStoch(IStrategy):
 
     # ROI table:
     minimal_roi = {
-        "0": 0.593,
-        "1469": 0.153,
-        "2722": 0.098,
-        "5246": 0
+        "0": 0.38,
+        "1485": 0.105,
+        "2294": 0.04,
+        "4775": 0
     }
 
     # Stoploss:
-    stoploss = -0.023
+    stoploss = -0.333
+
     # Trailing stop:
+    trailing_stop = True
+    trailing_stop_positive = 0.25
+    trailing_stop_positive_offset = 0.322
+    trailing_only_offset_is_reached = True
+
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
         informative_pairs = [(pair, self.timeframe_main) for pair in pairs] + \
                             [(pair, self.timeframe_support) for pair in pairs]
+        informative_pairs.append("BTC/USDT")
         return informative_pairs
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -68,21 +69,24 @@ class StrategyKlingerStoch(IStrategy):
         )   
         [dataframe_main["main_kvo"], dataframe_main["main_ks"]] = \
             klinger_oscilator(dataframe_main)
-    
-        rsi = RSI(dataframe_main["close"],14)
-        stoch_k, stoch_d = STOCH(rsi,rsi,rsi,
-                                    fastk_period=14,slowk_period=3,
-                                    slowk_matype=ta.MA_Type.EMA,
-                                    slowd_period=3,
-                                    slowd_matype=ta.MA_Type.EMA)
-        k = SMA(stoch_k,3)
-        d = SMA(k,3)
-        dataframe_main["stochk"] = k
-        dataframe_main["stochd"] = d
-        #dataframe_main["stochk"] = stoch["fastk"]
-        #dataframe_main["stochd"] = stoch["fastd"]
-        #dataframe_main["stochk"] = ta.SMA(stoch["fastk"],3)
-        #dataframe_main["stochd"] = ta.SMA(dataframe_main["stochk"],3)
+
+        dataframe_main = stoch_rsi_smooth(dataframe_main)
+
+        if metadata["pair"] != "BTC/USDT":
+            btc_dataframe = self.dp.get_pair_dataframe(
+                pair="BTC/USDT",
+                timeframe=self.timeframe_support
+            )
+            [btc_dataframe["btc_kvo"],btc_dataframe["btc_ks"]] = klinger_oscilator(btc_dataframe)
+            #btc_dataframe = stoch_rsi_smooth(btc_dataframe)
+            #btc_dataframe.rename(inplace=True,columns={"stochk":"btc_stochk","stochd": "btc_stochd"})
+            dataframe = merge_dataframes(
+                source=btc_dataframe,
+                sourceTimeframe=self.timeframe_support,
+                destination=dataframe,
+                destinationTimeFrame=self.timeframe
+            )    
+
         dataframe = merge_dataframes(
             source=dataframe_main,
             sourceTimeframe=self.timeframe_main,
@@ -94,14 +98,21 @@ class StrategyKlingerStoch(IStrategy):
 
     def populate_buy_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         minimum_coin_price = 0.0000015
+        conditions = []
         last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
-        dataframe.loc[(
-            (dataframe["stochk"] > last_candle_main["stochk"]) &
-            ((last_candle_main['main_kvo'] < last_candle_main['main_ks']) &
-            (dataframe['main_kvo'] > dataframe['main_ks'])) &
-            (dataframe["volume"] > 0) &
-            (dataframe["close"] > minimum_coin_price)
-        ), "buy"] = 1
+        last_candle_support = dataframe.shift(self.shift_value(self.timeframe_support))
+        conditions.append(dataframe["volume"] > 0)
+        conditions.append(dataframe["close"] > minimum_coin_price)
+        conditions.append(dataframe["stochk"] > last_candle_main["stochk"])
+        conditions.append((last_candle_main['main_kvo'] < last_candle_main['main_ks']) &
+                          (dataframe['main_kvo'] > dataframe['main_ks']))
+        if('btc_stochk' in dataframe.columns):
+            conditions.append(dataframe["btc_stochk"] > last_candle_main["btc_stochk"])
+        if('btc_kvo' in dataframe.columns):
+            conditions.append(dataframe["btc_kvo"] > last_candle_support["btc_ks"])
+        if conditions:
+            dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
+
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
