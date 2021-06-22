@@ -1,15 +1,8 @@
-from logging import debug
-from freqtrade.vendor.qtpylib.indicators import typical_price
-from numpy import array
 from mcDuck.custom_indicators import klinger_oscilator
-from scipy.signal import find_peaks
 from pandas.core.frame import DataFrame
 from freqtrade.strategy import IStrategy, merge_informative_pair
 from freqtrade.exchange import timeframe_to_minutes
 from tabulate import tabulate
-import numpy
-import talib.abstract as ta
-import freqtrade.vendor.qtpylib.indicators as qtpylib
 
 
 class StrategyKlingerSpikes(IStrategy):

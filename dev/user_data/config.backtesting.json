@@ -1,0 +1,4 @@
+{
+  "timeframe" : "5m",
+  "hyperopt_loss" : "SortinoHyperOptLossDaily"
+}

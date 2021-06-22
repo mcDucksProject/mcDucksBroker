@@ -1,6 +1,6 @@
 {
   "stake_currency": "USDT",
-  "dry_run_wallet" : 1000,
+  "dry_run_wallet" : 939,
   "exchange": {
     "pair_whitelist": [
       "BTC/USDT",
@@ -8,6 +8,7 @@
       "DOT/USDT",
       "AAVE/USDT",
       "MATIC/USDT",
+      "BNB/USDT",
       "ETH/USDT",
       "EGLD/USDT",
       "ADA/USDT",
@@ -26,14 +27,14 @@
       "LINK/USDT",
       "XMR/USDT",
       "XRP/USDT",
-      //"SHIB/USDT",
+      "SHIB/USDT",
       "DOGE/USDT",
       "SXP/USDT",
       "LTC/USDT",
       "TFUEL/USDT",
       "KSM/USDT",
-      //"ICP/USDT",
-      //"ATA/USDT",
+      "ICP/USDT",
+      "ATA/USDT",
       "FIL/USDT",
       "LUNA/USDT",
       "PERL/USDT",
