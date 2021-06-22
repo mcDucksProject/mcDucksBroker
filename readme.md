@@ -1,5 +1,5 @@
-![g12](https://user-images.githubusercontent.com/1235670/122944929-7f49a080-d378-11eb-9af9-a1525bcc6a18.png)
 # Mc Duck's Broker
+![g12](https://user-images.githubusercontent.com/1235670/122944929-7f49a080-d378-11eb-9af9-a1525bcc6a18.png)
 
 This is a combination of strategies and configurations for the Freqtrade bot.
 For more information about Freqtrade, please visit their [documentation](https://www.freqtrade.io/).
