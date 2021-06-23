@@ -1,17 +1,13 @@
 {
-  "strategy": "StrategyKlingerStochWBtc",
+  "strategy": "StrategyTrendReversal",
   "max_open_trades": 10,
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
-  "timeframe": "4h",
-  "dry_run": true,
-  "cancel_open_orders_on_exit": true,
-  "amend_last_stake_amount": true,  
+  "timeframe": "5m",
   "unfilledtimeout": {
     "buy": 10,
     "sell": 30
   },
-  "stoploss_on_exchange": true,
   "bid_strategy": {
     "use_order_book": true,
     "ask_last_balance": 1.0,
@@ -25,7 +21,7 @@
     "use_order_book": false,
     "order_book_min": 1,
     "order_book_max": 9
-  },
+  },  
   "pairlists": [
     {
       "method": "StaticPairList"

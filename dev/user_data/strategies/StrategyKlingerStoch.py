@@ -12,6 +12,8 @@ from functools import reduce
 """
 Buys when the 1D Klinger and de 4H Klinger crosses
 """
+
+
 class StrategyKlingerStoch(IStrategy):
     INTERFACE_VERSION = 2
 
@@ -47,7 +49,7 @@ class StrategyKlingerStoch(IStrategy):
     trailing_stop_positive = 0.318
     trailing_stop_positive_offset = 0.397
     trailing_only_offset_is_reached = True
-    
+
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
         informative_pairs = [(pair, self.timeframe_main) for pair in pairs] + \
@@ -63,20 +65,20 @@ class StrategyKlingerStoch(IStrategy):
             return dataframe
 
         dataframe_main = self.dp.get_pair_dataframe(
-                pair=metadata['pair'], 
-                timeframe=self.timeframe_main
-        )   
+            pair=metadata['pair'],
+            timeframe=self.timeframe_main
+        )
         [dataframe_main["main_kvo"], dataframe_main["main_ks"]] = \
             klinger_oscilator(dataframe_main)
 
-        dataframe_main = stoch_rsi_smooth(dataframe_main) 
+        dataframe_main = stoch_rsi_smooth(dataframe_main)
 
         dataframe = merge_dataframes(
             source=dataframe_main,
             sourceTimeframe=self.timeframe_main,
             destination=dataframe,
             destinationTimeFrame=self.timeframe
-        )    
+        )
 
         return dataframe
 
@@ -100,11 +102,11 @@ class StrategyKlingerStoch(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))      
+        last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
         dataframe.loc[(
             (dataframe["stochk"] < last_candle_main["stochk"]) &
             ((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
-            (dataframe['main_kvo'] < dataframe['main_ks'])) &            
+             (dataframe['main_kvo'] < dataframe['main_ks'])) &
             (dataframe["volume"] > 0)
         ), "sell"] = 0
         return dataframe
