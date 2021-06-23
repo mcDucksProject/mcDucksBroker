@@ -1,5 +1,5 @@
 {
-  "strategy": "StrategySimpleTrendReversal",
+  "strategy": "StrategyTrendReversal",
   "max_open_trades": 10,
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,

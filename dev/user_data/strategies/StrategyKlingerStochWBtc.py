@@ -12,6 +12,8 @@ from functools import reduce
 """
 Buys when the 1D Klinger and de 4H Klinger crosses
 """
+
+
 class StrategyKlingerStochWBtc(IStrategy):
     INTERFACE_VERSION = 2
 
@@ -52,7 +54,7 @@ class StrategyKlingerStochWBtc(IStrategy):
         pairs = self.dp.current_whitelist()
         informative_pairs = [(pair, self.timeframe_main) for pair in pairs] + \
                             [(pair, self.timeframe_support) for pair in pairs]
-        informative_pairs.append(("BTC/USDT",self.timeframe_support))
+        informative_pairs.append(("BTC/USDT", self.timeframe_support))
         return informative_pairs
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -64,9 +66,9 @@ class StrategyKlingerStochWBtc(IStrategy):
             return dataframe
 
         dataframe_main = self.dp.get_pair_dataframe(
-                pair=metadata['pair'], 
-                timeframe=self.timeframe_main
-        )   
+            pair=metadata['pair'],
+            timeframe=self.timeframe_main
+        )
         [dataframe_main["main_kvo"], dataframe_main["main_ks"]] = \
             klinger_oscilator(dataframe_main)
 
@@ -76,7 +78,7 @@ class StrategyKlingerStochWBtc(IStrategy):
             pair="BTC/USDT",
             timeframe=self.timeframe_support
         )
-        [btc_dataframe["btc_kvo"],btc_dataframe["btc_ks"]] = klinger_oscilator(btc_dataframe)
+        [btc_dataframe["btc_kvo"], btc_dataframe["btc_ks"]] = klinger_oscilator(btc_dataframe)
         #btc_dataframe = stoch_rsi_smooth(btc_dataframe)
         #btc_dataframe.rename(inplace=True,columns={"stochk":"btc_stochk","stochd": "btc_stochd"})
         dataframe = merge_dataframes(
@@ -84,14 +86,14 @@ class StrategyKlingerStochWBtc(IStrategy):
             sourceTimeframe=self.timeframe_support,
             destination=dataframe,
             destinationTimeFrame=self.timeframe
-        )    
+        )
 
         dataframe = merge_dataframes(
             source=dataframe_main,
             sourceTimeframe=self.timeframe_main,
             destination=dataframe,
             destinationTimeFrame=self.timeframe
-        )    
+        )
 
         return dataframe
 
@@ -108,7 +110,8 @@ class StrategyKlingerStochWBtc(IStrategy):
         if('btc_stochk' in dataframe.columns):
             conditions.append(dataframe["btc_stochk"] > last_candle_main["btc_stochk"])
         if('btc_kvo' in dataframe.columns):
-            conditions.append(dataframe["btc_kvo"] > last_candle_support["btc_ks"])
+            conditions.append((last_candle_main['btc_kvo'] < last_candle_main['btc_ks']) &
+                              (dataframe['btc_kvo'] > dataframe['btc_ks']))
         if conditions:
             dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
 
