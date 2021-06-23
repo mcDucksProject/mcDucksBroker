@@ -7,6 +7,8 @@ import talib as ta
 from talib.abstract import SMA, STOCH, RSI, EMA, TYPPRICE
 
 MAIN_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume']
+BULLISH = "bullish"
+BEARISH = "bearish"
 
 def klinger_oscilator(dataframe: DataFrame) -> array:
     previous_dataframe = dataframe.shift(1)
@@ -30,6 +32,29 @@ def stoch_rsi_smooth(dataframe: DataFrame) -> DataFrame:
     dataframe["stochk"] = SMA(stoch_k,3)
     dataframe["stochd"] = SMA(dataframe["stochk"],3)
     return dataframe
+
+def simpleTrendReversal(dataframe: DataFrame) -> DataFrame:
+    dataframe['type'] = where((dataframe['open'] > dataframe['close']),BULLISH, BEARISH)
+    dataframe['size'] = abs(dataframe['open'] - dataframe['close'])    
+    candle_1 = dataframe.shift(1)
+    candle_2 = dataframe.shift(2)
+    candle_3 = dataframe.shift(3)
+    dataframe.loc[((candle_1['type'] == BEARISH) & \
+       (candle_1['size'] < dataframe['size']) & \
+       (candle_2['type'] == BEARISH) & \
+       (candle_2['size'] < dataframe['size']) & \
+       (candle_3['type'] == BEARISH) & \
+       (candle_3['size'] < dataframe['size'])),'trend_reversal'] = True
+
+    #for i in range(1,3):
+    #    candle = dataframe.shift(i)
+    #    if (candle['type'] != BEARISH) | \
+    #       (candle['size'] > dataframe['size']):
+    #        break
+    #    if i == 3:
+    #        dataframe['trend_reversal'] = True
+    return dataframe
+
 
 def populate_incomplete_candle(dataframe: DataFrame, ticker: dict) -> DataFrame:
     return dataframe.copy().iloc[1:].append({
@@ -55,3 +80,4 @@ def merge_dataframes(source: DataFrame,
     destination.rename(inplace=True,columns=lambda s: 
         s.replace("_{}".format(sourceTimeframe), "") if (not s in skip_columns) else s)
     return destination
+

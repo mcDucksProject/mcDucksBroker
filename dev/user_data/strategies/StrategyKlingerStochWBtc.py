@@ -72,20 +72,19 @@ class StrategyKlingerStochWBtc(IStrategy):
 
         dataframe_main = stoch_rsi_smooth(dataframe_main)
 
-        if metadata["pair"] != "BTC/USDT":
-            btc_dataframe = self.dp.get_pair_dataframe(
-                pair="BTC/USDT",
-                timeframe=self.timeframe_support
-            )
-            [btc_dataframe["btc_kvo"],btc_dataframe["btc_ks"]] = klinger_oscilator(btc_dataframe)
-            #btc_dataframe = stoch_rsi_smooth(btc_dataframe)
-            #btc_dataframe.rename(inplace=True,columns={"stochk":"btc_stochk","stochd": "btc_stochd"})
-            dataframe = merge_dataframes(
-                source=btc_dataframe,
-                sourceTimeframe=self.timeframe_support,
-                destination=dataframe,
-                destinationTimeFrame=self.timeframe
-            )    
+        btc_dataframe = self.dp.get_pair_dataframe(
+            pair="BTC/USDT",
+            timeframe=self.timeframe_support
+        )
+        [btc_dataframe["btc_kvo"],btc_dataframe["btc_ks"]] = klinger_oscilator(btc_dataframe)
+        #btc_dataframe = stoch_rsi_smooth(btc_dataframe)
+        #btc_dataframe.rename(inplace=True,columns={"stochk":"btc_stochk","stochd": "btc_stochd"})
+        dataframe = merge_dataframes(
+            source=btc_dataframe,
+            sourceTimeframe=self.timeframe_support,
+            destination=dataframe,
+            destinationTimeFrame=self.timeframe
+        )    
 
         dataframe = merge_dataframes(
             source=dataframe_main,
@@ -116,13 +115,14 @@ class StrategyKlingerStochWBtc(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))      
-        dataframe.loc[(
-            (dataframe["stochk"] < last_candle_main["stochk"]) &
-            ((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
-            (dataframe['main_kvo'] < dataframe['main_ks'])) &            
-            (dataframe["volume"] > 0)
-        ), "sell"] = 0
+        conditions = []
+        last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
+        conditions.append(dataframe["volume"] > 0)
+        conditions.append(dataframe["stochk"] < last_candle_main["stochk"])
+        conditions.append((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
+                          (dataframe['main_kvo'] < dataframe['main_ks']))
+        if conditions:
+            dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
         return dataframe
 
     def shift_value(self, timeframe: str) -> int:
