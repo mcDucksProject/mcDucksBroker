@@ -10,11 +10,11 @@ from functools import reduce
 
 
 """
-Buys when the 1D Klinger and de 4H Klinger crosses
+Buys when the 1D Klinger and the 4H Klinger crosses
 """
 
 
-class StrategyKlingerStochWBtc(IStrategy):
+class StrategyKlingerStochWBtc2(IStrategy):
     INTERFACE_VERSION = 2
 
     # Optimal ticker interval for the strategy.
@@ -35,14 +35,14 @@ class StrategyKlingerStochWBtc(IStrategy):
 
     # ROI table:
     minimal_roi = {
-        "0": 0.893,
-        "1223": 0.291,
-        "3737": 0.078,
-        "7113": 0
+        "0": 0.639,
+        "1684": 0.302,
+        "4389": 0.091,
+        "7034": 0
     }
 
     # Stoploss:
-    stoploss = -0.05
+    stoploss = -0.15
 
     # Trailing stop:
     trailing_stop = False
