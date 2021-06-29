@@ -125,7 +125,7 @@ class StrategyKlingerStochWBtc2(IStrategy):
         conditions.append((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
                           (dataframe['main_kvo'] < dataframe['main_ks']))
         if conditions:
-            dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
+            dataframe.loc[reduce(lambda x, y: x & y, conditions), "sell"] = 1
         return dataframe
 
     def shift_value(self, timeframe: str) -> int:

@@ -30,6 +30,6 @@ services:
       --db-url sqlite:////freqtrade/user_data/tradesv3-prod.sqlite
       --config /freqtrade/user_data/config.base.json
       --config /freqtrade/user_data/config.strategyKlinger.json
-      --config /freqtrade/user_data/config.currencyUSDT.json
+      --config /freqtrade/user_data/config.currencyBTC.json
       --config /freqtrade/user_data/config.exchangeBinance.json
       --config /freqtrade/user_data/config.private.json
