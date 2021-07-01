@@ -1,6 +1,12 @@
 {
-  "stoploss_on_exchange": true,
-  "exchange": {
+  "order_types": {
+    "buy": "limit",
+    "sell": "market",
+    "emergencysell": "market",
+    "stoploss": "market",
+    "stoploss_on_exchange": true
+  },
+   "exchange": {
     "name": "binance",
     "ccxt_config": {
       "enableRateLimit": true
