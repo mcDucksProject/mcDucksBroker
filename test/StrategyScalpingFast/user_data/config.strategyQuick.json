@@ -1,10 +1,10 @@
 {
-  "strategy": "StrategyKlingerHybrid",
-  "max_open_trades": 10,
+  "strategy": "StrategyScalpingFast",
+  "bot_name": "freqtrade - ScalpingFast",
+  "max_open_trades": 20,
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
-  "fiat_display_currency": "USD",
-  "timeframe": "4h",
+  "timeframe": "1m",
   "dry_run": true,
   "cancel_open_orders_on_exit": true,
   "amend_last_stake_amount": true,  
@@ -27,10 +27,7 @@
     "price_side": "bid",
     "use_order_book": false,
     "order_book_min": 1,
-    "order_book_max": 9,
-    "use_sell_signal": true,
-    "sell_profit_only": false,
-    "ignore_roi_if_buy_signal": false
+    "order_book_max": 9
   },
   "pairlists": [
     {

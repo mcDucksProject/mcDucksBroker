@@ -35,15 +35,15 @@ class StrategyKlingerStochWBtc(IStrategy):
 
     # ROI table:
     minimal_roi = {
-        "0": 0.38,
-        "1485": 0.105,
-        "2294": 0.04,
-        "4775": 0
+        "0": 0.494,
+        "1788": 0.091,
+        "3477": 0.051,
+        "8385": 0
     }
 
     # Stoploss:
     stoploss = -0.333
-
+    
     # Trailing stop:
     trailing_stop = True
     trailing_stop_positive = 0.25
@@ -102,30 +102,27 @@ class StrategyKlingerStochWBtc(IStrategy):
         conditions = []
         last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
         last_candle_support = dataframe.shift(self.shift_value(self.timeframe_support))
+
         conditions.append(dataframe["volume"] > 0)
         conditions.append(dataframe["close"] > minimum_coin_price)
         conditions.append(dataframe["stochk"] > last_candle_main["stochk"])
         conditions.append((last_candle_main['main_kvo'] < last_candle_main['main_ks']) &
                           (dataframe['main_kvo'] > dataframe['main_ks']))
+
         if('btc_stochk' in dataframe.columns):
-            conditions.append(dataframe["btc_stochk"] > last_candle_main["btc_stochk"])
+            conditions.append(dataframe["btc_stochk"] > last_candle_support["btc_stochk"])
+
         if('btc_kvo' in dataframe.columns):
-            conditions.append((last_candle_main['btc_kvo'] < last_candle_main['btc_ks']) &
+            conditions.append((last_candle_support['btc_kvo'] < last_candle_support['btc_ks']) &
                               (dataframe['btc_kvo'] > dataframe['btc_ks']))
+
         if conditions:
             dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
 
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        conditions = []
-        last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
-        conditions.append(dataframe["volume"] > 0)
-        conditions.append(dataframe["stochk"] < last_candle_main["stochk"])
-        conditions.append((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
-                          (dataframe['main_kvo'] < dataframe['main_ks']))
-        if conditions:
-            dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
+        dataframe["sell"] = 0
         return dataframe
 
     def shift_value(self, timeframe: str) -> int:
