@@ -122,14 +122,7 @@ class StrategyKlingerStochWBtc(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        conditions = []
-        last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
-        conditions.append(dataframe["volume"] > 0)
-        conditions.append(dataframe["stochk"] < last_candle_main["stochk"])
-        conditions.append((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
-                          (dataframe['main_kvo'] < dataframe['main_ks']))
-        if conditions:
-            dataframe.loc[reduce(lambda x, y: x & y, conditions), "sell"] = 1
+        dataframe["sell"] = 0
         return dataframe
 
     def shift_value(self, timeframe: str) -> int:

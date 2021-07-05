@@ -38,10 +38,7 @@ class StrategyKlingerStochWBtc2(StrategyKlingerStochWBtc):
 
     # ROI table:
     minimal_roi = {
-        "0": 0.639,
-        "1684": 0.302,
-        "4389": 0.091,
-        "7034": 0
+        "0": 0.01
     }
 
     # Stoploss:
