@@ -38,16 +38,19 @@ class StrategyKlingerStochWBtc2(StrategyKlingerStochWBtc):
 
     # ROI table:
     minimal_roi = {
-        "0": 0.01
+        "0": 0.489,
+        "961": 0.318,
+        "2479": 0.105,
+        "4379": 0
     }
 
     # Stoploss:
-    stoploss = -0.15
+    stoploss = -0.04
 
     # Trailing stop:
-    trailing_stop = False
-    trailing_stop_positive = 0.25
-    trailing_stop_positive_offset = 0.322
-    trailing_only_offset_is_reached = True
+    trailing_stop = True
+    trailing_stop_positive = 0.05
+    trailing_stop_positive_offset = 0.06
+    trailing_only_offset_is_reached = False
 
    

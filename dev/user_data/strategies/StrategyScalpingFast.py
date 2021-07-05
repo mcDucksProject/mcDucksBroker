@@ -16,7 +16,7 @@ class StrategyScalpingFast(IStrategy):
         "0": 0.01
     }
 
-    stoploss = -0.5
+    stoploss = -0.35
     timeframe = '1m'
     timeframe_support = '5m'
     timeframe_main = '5m'
@@ -25,7 +25,7 @@ class StrategyScalpingFast(IStrategy):
     sell_profit_only = False
     ignore_roi_if_buy_signal = False
     ignore_buying_expired_candle_after = 0
-    trailing_stop = True
+    trailing_stop = False
 
     startup_candle_count: int = 20
 
