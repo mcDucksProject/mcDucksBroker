@@ -25,7 +25,7 @@ class StrategyScalpingFast(IStrategy):
     sell_profit_only = False
     ignore_roi_if_buy_signal = False
     ignore_buying_expired_candle_after = 0
-    trailing_stop = True
+    trailing_stop = False
 
     startup_candle_count: int = 20
 
