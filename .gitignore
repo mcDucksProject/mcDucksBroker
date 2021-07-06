@@ -9,7 +9,7 @@ hyperopt.lock
 __pycache__
 plot/*
 config.private.json
-
+*/logs
 # Freqtrade rules
 *.sqlite
 logfile.txt
