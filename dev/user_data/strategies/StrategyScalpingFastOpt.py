@@ -10,10 +10,16 @@ import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 
 
-class StrategyScalpingFast(IStrategy):
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent))
+
+from StrategyScalpingFast import StrategyScalpingFast
+
+class StrategyScalpingFastOpt(StrategyScalpingFast):
 
     minimal_roi = {
-        "0": 0.01
+        "0": 0.03
     }
 
     stoploss = -0.5
@@ -25,7 +31,9 @@ class StrategyScalpingFast(IStrategy):
     sell_profit_only = False
     ignore_roi_if_buy_signal = False
     ignore_buying_expired_candle_after = 0
-    trailing_stop = False
+
+    trailing_stop = True
+
 
     startup_candle_count: int = 20
 

@@ -32,9 +32,6 @@
       "enableRateLimit": true,
       "rateLimit": 200
     },
-    //"pair_whitelist" : [
-        //".*/BTC"
-    //],
     "pair_blacklist": [
       ".*DOWN/BTC",
       ".*UP/BTC",

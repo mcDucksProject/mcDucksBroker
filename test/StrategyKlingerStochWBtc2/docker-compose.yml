@@ -20,9 +20,15 @@ services:
     # Please read the https://www.freqtrade.io/en/latest/rest-api/ documentation
     # before enabling this.
     expose:
+<<<<<<< HEAD
+      - "9191"
+    ports:
+      - "9191:9191"
+=======
       - "9090"
     ports:
       - "9090:9090"
+>>>>>>> a974a7da0bbf019222ee8f3a2a82855702ff560a
     # Default command used when running `docker compose up`
     command: >
       trade
