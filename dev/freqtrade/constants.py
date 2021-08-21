@@ -12,6 +12,7 @@ PROCESS_THROTTLE_SECS = 5  # sec
 HYPEROPT_EPOCH = 100  # epochs
 RETRY_TIMEOUT = 30  # sec
 TIMEOUT_UNITS = ['minutes', 'seconds']
+EXPORT_OPTIONS = ['none', 'trades']
 DEFAULT_DB_PROD_URL = 'sqlite:///tradesv3.sqlite'
 DEFAULT_DB_DRYRUN_URL = 'sqlite:///tradesv3.dryrun.sqlite'
 UNLIMITED_STAKE_AMOUNT = 'unlimited'
@@ -25,9 +26,9 @@ HYPEROPT_LOSS_BUILTIN = ['ShortTradeDurHyperOptLoss', 'OnlyProfitHyperOptLoss',
                          'SharpeHyperOptLoss', 'SharpeHyperOptLossDaily',
                          'SortinoHyperOptLoss', 'SortinoHyperOptLossDaily']
 AVAILABLE_PAIRLISTS = ['StaticPairList', 'VolumePairList',
-                       'AgeFilter', 'PerformanceFilter', 'PrecisionFilter',
-                       'PriceFilter', 'RangeStabilityFilter', 'ShuffleFilter',
-                       'SpreadFilter', 'VolatilityFilter']
+                       'AgeFilter', 'OffsetFilter', 'PerformanceFilter',
+                       'PrecisionFilter', 'PriceFilter', 'RangeStabilityFilter',
+                       'ShuffleFilter', 'SpreadFilter', 'VolatilityFilter']
 AVAILABLE_PROTECTIONS = ['CooldownPeriod', 'LowProfitPairs', 'MaxDrawdown', 'StoplossGuard']
 AVAILABLE_DATAHANDLERS = ['json', 'jsongz', 'hdf5']
 DRY_RUN_WALLET = 1000
@@ -39,12 +40,14 @@ DEFAULT_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume']
 DEFAULT_TRADES_COLUMNS = ['timestamp', 'id', 'type', 'side', 'price', 'amount', 'cost']
 
 LAST_BT_RESULT_FN = '.last_result.json'
+FTHYPT_FILEVERSION = 'fthypt_fileversion'
 
 USERPATH_HYPEROPTS = 'hyperopts'
 USERPATH_STRATEGIES = 'strategies'
 USERPATH_NOTEBOOKS = 'notebooks'
 
 TELEGRAM_SETTING_OPTIONS = ['on', 'off', 'silent']
+ENV_VAR_PREFIX = 'FREQTRADE__'
 
 
 # Define decimals per coin for outputs
@@ -61,7 +64,7 @@ DUST_PER_COIN = {
 }
 
 
-# Soure files with destination directories within user-directory
+# Source files with destination directories within user-directory
 USER_DATA_FILES = {
     'sample_strategy.py': USERPATH_STRATEGIES,
     'sample_hyperopt_advanced.py': USERPATH_HYPEROPTS,
@@ -111,6 +114,10 @@ CONF_SCHEMA = {
             'maximum': 1,
             'default': 0.99
         },
+        'available_capital': {
+            'type': 'number',
+            'minimum': 0,
+        },
         'amend_last_stake_amount': {'type': 'boolean', 'default': False},
         'last_stake_amount_min_ratio': {
             'type': 'number', 'minimum': 0.0, 'maximum': 1.0, 'default': 0.5
@@ -133,6 +140,11 @@ CONF_SCHEMA = {
         'trailing_stop_positive': {'type': 'number', 'minimum': 0, 'maximum': 1},
         'trailing_stop_positive_offset': {'type': 'number', 'minimum': 0, 'maximum': 1},
         'trailing_only_offset_is_reached': {'type': 'boolean'},
+        'use_sell_signal': {'type': 'boolean'},
+        'sell_profit_only': {'type': 'boolean'},
+        'sell_profit_offset': {'type': 'number'},
+        'ignore_roi_if_buy_signal': {'type': 'boolean'},
+        'ignore_buying_expired_candle_after': {'type': 'number'},
         'bot_name': {'type': 'string'},
         'unfilledtimeout': {
             'type': 'object',
@@ -153,7 +165,7 @@ CONF_SCHEMA = {
                 },
                 'price_side': {'type': 'string', 'enum': ORDERBOOK_SIDES, 'default': 'bid'},
                 'use_order_book': {'type': 'boolean'},
-                'order_book_top': {'type': 'integer', 'maximum': 20, 'minimum': 1},
+                'order_book_top': {'type': 'integer', 'minimum': 1, 'maximum': 50, },
                 'check_depth_of_market': {
                     'type': 'object',
                     'properties': {
@@ -162,7 +174,7 @@ CONF_SCHEMA = {
                     }
                 },
             },
-            'required': ['ask_last_balance']
+            'required': ['price_side']
         },
         'ask_strategy': {
             'type': 'object',
@@ -175,13 +187,12 @@ CONF_SCHEMA = {
                     'exclusiveMaximum': False,
                 },
                 'use_order_book': {'type': 'boolean'},
-                'order_book_min': {'type': 'integer', 'minimum': 1},
-                'order_book_max': {'type': 'integer', 'minimum': 1, 'maximum': 50},
-                'use_sell_signal': {'type': 'boolean'},
-                'sell_profit_only': {'type': 'boolean'},
-                'sell_profit_offset': {'type': 'number'},
-                'ignore_roi_if_buy_signal': {'type': 'boolean'}
-            }
+                'order_book_top': {'type': 'integer', 'minimum': 1, 'maximum': 50, },
+            },
+            'required': ['price_side']
+        },
+        'custom_price_max_distance_ratio': {
+           'type': 'number', 'minimum': 0.0
         },
         'order_types': {
             'type': 'object',
@@ -272,9 +283,10 @@ CONF_SCHEMA = {
                             'type': 'string',
                             'enum': TELEGRAM_SETTING_OPTIONS,
                             'default': 'off'
-                            },
+                        },
                     }
-                }
+                },
+                'reload': {'type': 'boolean'},
             },
             'required': ['enabled', 'token', 'chat_id'],
         },
@@ -308,6 +320,8 @@ CONF_SCHEMA = {
             'required': ['enabled', 'listen_ip_address', 'listen_port', 'username', 'password']
         },
         'db_url': {'type': 'string'},
+        'export': {'type': 'string', 'enum': EXPORT_OPTIONS, 'default': 'trades'},
+        'disableparamexport': {'type': 'boolean'},
         'initial_state': {'type': 'string', 'enum': ['running', 'stopped']},
         'forcebuy_enable': {'type': 'boolean'},
         'disable_dataframe_checks': {'type': 'boolean'},

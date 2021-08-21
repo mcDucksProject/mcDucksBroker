@@ -47,7 +47,7 @@ def init_plotscript(config, markets: List, startup_candles: int = 0):
     data = load_data(
         datadir=config.get('datadir'),
         pairs=pairs,
-        timeframe=config.get('timeframe', '5m'),
+        timeframe=config['timeframe'],
         timerange=timerange,
         startup_candles=startup_candles,
         data_format=config.get('dataformat_ohlcv', 'json'),
@@ -56,7 +56,7 @@ def init_plotscript(config, markets: List, startup_candles: int = 0):
     if startup_candles and data:
         min_date, max_date = get_timerange(data)
         logger.info(f"Loading data from {min_date} to {max_date}")
-        timerange.adjust_start_if_necessary(timeframe_to_seconds(config.get('timeframe', '5m')),
+        timerange.adjust_start_if_necessary(timeframe_to_seconds(config['timeframe']),
                                             startup_candles, min_date)
 
     no_trades = False
@@ -288,8 +288,8 @@ def plot_area(fig, row: int, data: pd.DataFrame, indicator_a: str,
     :param fig: Plot figure to append to
     :param row: row number for this plot
     :param data: candlestick DataFrame
-    :param indicator_a: indicator name as populated in stragetie
-    :param indicator_b: indicator name as populated in stragetie
+    :param indicator_a: indicator name as populated in strategy
+    :param indicator_b: indicator name as populated in strategy
     :param label: label for the filled area
     :param fill_color: color to be used for the filled area
     :return: fig with added  filled_traces plot
@@ -334,8 +334,8 @@ def add_areas(fig, row: int, data: pd.DataFrame, indicators) -> make_subplots:
                 )
             elif indicator_b not in data:
                 logger.info(
-                        'fill_to: "%s" ignored. Reason: This indicator is not '
-                        'in your strategy.', indicator_b
+                    'fill_to: "%s" ignored. Reason: This indicator is not '
+                    'in your strategy.', indicator_b
                 )
     return fig
 
@@ -373,6 +373,7 @@ def generate_candlestick_graph(pair: str, data: pd.DataFrame, trades: pd.DataFra
     for i, name in enumerate(plot_config['subplots']):
         fig['layout'][f'yaxis{3 + i}'].update(title=name)
     fig['layout']['xaxis']['rangeslider'].update(visible=False)
+    fig.update_layout(modebar_add=["v1hovermode", "toggleSpikeLines"])
 
     # Common information
     candles = go.Candlestick(
@@ -452,6 +453,7 @@ def generate_candlestick_graph(pair: str, data: pd.DataFrame, trades: pd.DataFra
                              data=data)
         # fill area between indicators ( 'fill_to': 'other_indicator')
         fig = add_areas(fig, row, data, sub_config)
+
     return fig
 
 
@@ -484,6 +486,7 @@ def generate_profit_graph(pairs: str, data: Dict[str, pd.DataFrame],
     fig['layout']['yaxis2'].update(title=f'Profit {stake_currency}')
     fig['layout']['yaxis3'].update(title=f'Profit {stake_currency}')
     fig['layout']['xaxis']['rangeslider'].update(visible=False)
+    fig.update_layout(modebar_add=["v1hovermode", "toggleSpikeLines"])
 
     fig.add_trace(avgclose, 1, 1)
     fig = add_profit(fig, 2, df_comb, 'cum_profit', 'Profit')
@@ -497,7 +500,6 @@ def generate_profit_graph(pairs: str, data: Dict[str, pd.DataFrame],
             fig = add_profit(fig, 3, df_comb, profit_col, f"Profit {pair}")
         except ValueError:
             pass
-
     return fig
 
 
@@ -536,7 +538,7 @@ def load_and_plot_trades(config: Dict[str, Any]):
     - Initializes plot-script
     - Get candle (OHLCV) data
     - Generate Dafaframes populated with indicators and signals based on configured strategy
-    - Load trades excecuted during the selected period
+    - Load trades executed during the selected period
     - Generate Plotly plot objects
     - Generate plot files
     :return: None
@@ -583,6 +585,9 @@ def plot_profit(config: Dict[str, Any]) -> None:
     But should be somewhat proportional, and therefor useful
     in helping out to find a good algorithm.
     """
+    if 'timeframe' not in config:
+        raise OperationalException('Timeframe must be set in either config or via --timeframe.')
+
     exchange = ExchangeResolver.load_exchange(config['exchange']['name'], config)
     plot_elements = init_plotscript(config, list(exchange.markets))
     trades = plot_elements['trades']
@@ -599,7 +604,8 @@ def plot_profit(config: Dict[str, Any]) -> None:
     # Create an average close price of all the pairs that were involved.
     # this could be useful to gauge the overall market trend
     fig = generate_profit_graph(plot_elements['pairs'], plot_elements['ohlcv'],
-                                trades, config.get('timeframe', '5m'),
+                                trades, config['timeframe'],
                                 config.get('stake_currency', ''))
     store_plot_file(fig, filename='freqtrade-profit-plot.html',
-                    directory=config['user_data_dir'] / 'plot', auto_open=True)
+                    directory=config['user_data_dir'] / 'plot',
+                    auto_open=config.get('plot_auto_open', False))

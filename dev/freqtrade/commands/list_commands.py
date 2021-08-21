@@ -1,7 +1,6 @@
 import csv
 import logging
 import sys
-from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -12,11 +11,11 @@ from tabulate import tabulate
 
 from freqtrade.configuration import setup_utils_configuration
 from freqtrade.constants import USERPATH_HYPEROPTS, USERPATH_STRATEGIES
+from freqtrade.enums import RunMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import market_is_active, validate_exchanges
-from freqtrade.misc import plural
+from freqtrade.misc import parse_db_uri_for_logging, plural
 from freqtrade.resolvers import ExchangeResolver, StrategyResolver
-from freqtrade.state import RunMode
 
 
 logger = logging.getLogger(__name__)
@@ -154,7 +153,7 @@ def start_list_markets(args: Dict[str, Any], pairs_only: bool = False) -> None:
                                      pairs_only=pairs_only,
                                      active_only=active_only)
         # Sort the pairs/markets by symbol
-        pairs = OrderedDict(sorted(pairs.items()))
+        pairs = dict(sorted(pairs.items()))
     except Exception as e:
         raise OperationalException(f"Cannot get markets. Reason: {e}") from e
 
@@ -226,7 +225,7 @@ def start_show_trades(args: Dict[str, Any]) -> None:
     if 'db_url' not in config:
         raise OperationalException("--db-url is required for this command.")
 
-    logger.info(f'Using DB: "{config["db_url"]}"')
+    logger.info(f'Using DB: "{parse_db_uri_for_logging(config["db_url"])}"')
     init_db(config['db_url'], clean_open_orders=False)
     tfilter = []
 

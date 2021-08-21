@@ -13,11 +13,11 @@ from pandas import DataFrame
 from freqtrade.configuration import TimeRange
 from freqtrade.constants import DATETIME_PRINT_FORMAT, UNLIMITED_STAKE_AMOUNT
 from freqtrade.data.history import get_timerange, load_data, refresh_data
+from freqtrade.enums import RunMode, SellType
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange.exchange import timeframe_to_seconds
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
-from freqtrade.state import RunMode
-from freqtrade.strategy.interface import IStrategy, SellType
+from freqtrade.strategy.interface import IStrategy
 
 
 logger = logging.getLogger(__name__)
@@ -151,7 +151,7 @@ class Edge:
         # Fake run-mode to Edge
         prior_rm = self.config['runmode']
         self.config['runmode'] = RunMode.EDGE
-        preprocessed = self.strategy.ohlcvdata_to_dataframe(data)
+        preprocessed = self.strategy.advise_all_indicators(data)
         self.config['runmode'] = prior_rm
 
         # Print timeframe
@@ -231,12 +231,12 @@ class Edge:
                     'Minimum expectancy and minimum winrate are met only for %s,'
                     ' so other pairs are filtered out.',
                     self._final_pairs
-                    )
+                )
             else:
                 logger.info(
                     'Edge removed all pairs as no pair with minimum expectancy '
                     'and minimum winrate was found !'
-                    )
+                )
 
         return self._final_pairs
 
@@ -247,7 +247,7 @@ class Edge:
         final = []
         for pair, info in self._cached_pairs.items():
             if info.expectancy > float(self.edge_config.get('minimum_expectancy', 0.2)) and \
-                 info.winrate > float(self.edge_config.get('minimum_winrate', 0.60)):
+                    info.winrate > float(self.edge_config.get('minimum_winrate', 0.60)):
                 final.append({
                     'Pair': pair,
                     'Winrate': info.winrate,
@@ -301,7 +301,7 @@ class Edge:
     def _process_expectancy(self, results: DataFrame) -> Dict[str, Any]:
         """
         This calculates WinRate, Required Risk Reward, Risk Reward and Expectancy of all pairs
-        The calulation will be done per pair and per strategy.
+        The calculation will be done per pair and per strategy.
         """
         # Removing pairs having less than min_trades_number
         min_trades_number = self.edge_config.get('min_trade_number', 10)

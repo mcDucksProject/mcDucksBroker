@@ -167,8 +167,9 @@ AVAILABLE_CLI_OPTIONS = {
     ),
     "export": Arg(
         '--export',
-        help='Export backtest results, argument are: trades. '
-        'Example: `--export=trades`',
+        help='Export backtest results (default: trades).',
+        choices=constants.EXPORT_OPTIONS,
+
     ),
     "exportfilename": Arg(
         '--export-filename',
@@ -176,6 +177,11 @@ AVAILABLE_CLI_OPTIONS = {
         'Requires `--export` to be set as well. '
         'Example: `--export-filename=user_data/backtest_results/backtest_today.json`',
         metavar='PATH',
+    ),
+    "disableparamexport": Arg(
+        '--disable-param-export',
+        help="Disable automatic hyperopt parameter export.",
+        action='store_true',
     ),
     "fee": Arg(
         '--fee',
@@ -212,7 +218,7 @@ AVAILABLE_CLI_OPTIONS = {
     "spaces": Arg(
         '--spaces',
         help='Specify which parameters to hyperopt. Space-separated list.',
-        choices=['all', 'buy', 'sell', 'roi', 'stoploss', 'trailing', 'default'],
+        choices=['all', 'buy', 'sell', 'roi', 'stoploss', 'trailing', 'protection', 'default'],
         nargs='+',
         default='default',
     ),
@@ -432,6 +438,11 @@ AVAILABLE_CLI_OPTIONS = {
         type=check_int_positive,
         metavar='INT',
         default=750,
+    ),
+    "plot_auto_open": Arg(
+        '--auto-open',
+        help='Automatically open generated plot.',
+        action='store_true',
     ),
     "no_trades": Arg(
         '--no-trades',

@@ -6,8 +6,8 @@ import numpy as np  # noqa
 import pandas as pd  # noqa
 from pandas import DataFrame
 
-from freqtrade.strategy import IStrategy
-from freqtrade.strategy import CategoricalParameter, DecimalParameter, IntParameter
+from freqtrade.strategy import (BooleanParameter, CategoricalParameter, DecimalParameter,
+                                IStrategy, IntParameter)
 
 # --------------------------------
 # Add your lib to import here
@@ -329,7 +329,7 @@ class SampleStrategy(IStrategy):
         """
         # first check if dataprovider is available
         if self.dp:
-            if self.dp.runmode in ('live', 'dry_run'):
+            if self.dp.runmode.value in ('live', 'dry_run'):
                 ob = self.dp.orderbook(metadata['pair'], 1)
                 dataframe['best_bid'] = ob['bids'][0][0]
                 dataframe['best_ask'] = ob['asks'][0][0]

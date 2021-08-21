@@ -1,10 +1,10 @@
 import logging
 from typing import Any, Dict
 
+from freqtrade.enums import RunMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import (available_exchanges, is_exchange_known_ccxt,
                                 is_exchange_officially_supported, validate_exchange)
-from freqtrade.state import RunMode
 
 
 logger = logging.getLogger(__name__)
@@ -51,10 +51,10 @@ def check_exchange(config: Dict[str, Any], check_for_bad: bool = True) -> bool:
 
     if not is_exchange_known_ccxt(exchange):
         raise OperationalException(
-                f'Exchange "{exchange}" is not known to the ccxt library '
-                f'and therefore not available for the bot.\n'
-                f'The following exchanges are available for Freqtrade: '
-                f'{", ".join(available_exchanges())}'
+            f'Exchange "{exchange}" is not known to the ccxt library '
+            f'and therefore not available for the bot.\n'
+            f'The following exchanges are available for Freqtrade: '
+            f'{", ".join(available_exchanges())}'
         )
 
     valid, reason = validate_exchange(exchange)
