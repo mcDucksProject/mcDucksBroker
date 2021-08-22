@@ -1,5 +1,6 @@
 {
   "stake_currency": "BTC",
+  "fiat_display_currency": "BTC",
   "dry_run_wallet" : 0.1,
   "exchange": {
     "pair_whitelist": [

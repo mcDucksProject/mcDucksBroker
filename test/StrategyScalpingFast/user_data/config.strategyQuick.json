@@ -1,9 +1,6 @@
 {
-  "strategy": "StrategyScalpingFast",
-<<<<<<< HEAD
-=======
+  "strategy": "StrategyScalpingFastOpt",
   "bot_name": "freqtrade - ScalpingFast",
->>>>>>> a974a7da0bbf019222ee8f3a2a82855702ff560a
   "max_open_trades": 20,
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
