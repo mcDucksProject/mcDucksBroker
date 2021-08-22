@@ -25,7 +25,7 @@ services:
   strategy_manual_btc:
     image: freqtradeorg/freqtrade:stable
     restart: unless-stopped
-    container_name: StrategyManualUsdt
+    container_name: StrategyManualBTC
     volumes:
       - "./StrategyManualBTC/user_data:/freqtrade/user_data"
       - "../../../dev/user_data/strategies:/freqtrade/user_data/strategies"
