@@ -1,0 +1,9 @@
+{
+  "stake_currency": "BTC",
+  "dry_run_wallet" : 0.027,
+  "exchange": {
+    "pair_whitelist": [
+      "*/BTC"
+    ]
+  }
+}
