@@ -6,7 +6,8 @@
   "timeframe": "1m",
   "dry_run": true,
   "cancel_open_orders_on_exit": true,
-  "amend_last_stake_amount": true,  
+  "amend_last_stake_amount": true,
+  "forcebuy_enable": true,
   "unfilledtimeout": {
     "buy": 10,
     "sell": 30

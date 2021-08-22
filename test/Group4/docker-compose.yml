@@ -28,8 +28,8 @@ services:
     container_name: StrategyManualBTC
     volumes:
       - "./StrategyManualBTC:/freqtrade/user_data"
-      - "../../../dev/user_data/strategies:/freqtrade/user_data/strategies"
-      - "../../../dev/mcDuck:/freqtrade/mcDuck"
+      - "../../dev/user_data/strategies:/freqtrade/user_data/strategies"
+      - "../../dev/mcDuck:/freqtrade/mcDuck"
     expose:
       - "9090"
     ports:
