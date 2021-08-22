@@ -6,9 +6,9 @@ services:
     restart: unless-stopped
     container_name: StrategyManualUsdt
     volumes:
-      - "./StrategyManualUSDT/user_data:/freqtrade/user_data"
-      - "../../../dev/user_data/strategies:/freqtrade/user_data/strategies"
-      - "../../../dev/mcDuck:/freqtrade/mcDuck"
+      - "./StrategyManualUSDT:/freqtrade/user_data"
+      - "../../dev/user_data/strategies:/freqtrade/user_data/strategies"
+      - "../../dev/mcDuck:/freqtrade/mcDuck"
     expose:
       - "8080"
     ports:
@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     container_name: StrategyManualBTC
     volumes:
-      - "./StrategyManualBTC/user_data:/freqtrade/user_data"
+      - "./StrategyManualBTC:/freqtrade/user_data"
       - "../../../dev/user_data/strategies:/freqtrade/user_data/strategies"
       - "../../../dev/mcDuck:/freqtrade/mcDuck"
     expose:
