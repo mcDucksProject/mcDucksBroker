@@ -16,7 +16,7 @@ class StrategyManual(IStrategy):
         "0": 0.1
     }
 
-    stoploss = -0.05
+    stoploss = -0.1
     timeframe = '1m'
     timeframe_support = '5m'
     timeframe_main = '5m'
