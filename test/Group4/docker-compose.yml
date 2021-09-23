@@ -1,0 +1,45 @@
+---
+version: '3'
+services:
+  strategy_manual_usdt:
+    image: freqtradeorg/freqtrade:stable
+    restart: unless-stopped
+    container_name: StrategyManualUsdt
+    volumes:
+      - "./StrategyManualUSDT:/freqtrade/user_data"
+      - "../../dev/user_data/strategies:/freqtrade/user_data/strategies"
+      - "../../dev/mcDuck:/freqtrade/mcDuck"
+    expose:
+      - "8080"
+    ports:
+      - "8080:8080"
+    command: >
+      trade
+      --logfile /freqtrade/user_data/logs/freqtrade.log
+      --db-url sqlite:////freqtrade/user_data/tradesv3-prod.sqlite
+      --config /freqtrade/user_data/config.base.json
+      --config /freqtrade/user_data/config.strategyManual.json
+      --config /freqtrade/user_data/config.currencyUSDTAll.json
+      --config /freqtrade/user_data/config.exchangeBinance.json
+      --config /freqtrade/user_data/config.private.json
+  strategy_manual_btc:
+    image: freqtradeorg/freqtrade:stable
+    restart: unless-stopped
+    container_name: StrategyManualBTC
+    volumes:
+      - "./StrategyManualBTC:/freqtrade/user_data"
+      - "../../dev/user_data/strategies:/freqtrade/user_data/strategies"
+      - "../../dev/mcDuck:/freqtrade/mcDuck"
+    expose:
+      - "9090"
+    ports:
+      - "9090:9090"
+    command: >
+      trade
+      --logfile /freqtrade/user_data/logs/freqtrade.log
+      --db-url sqlite:////freqtrade/user_data/tradesv3-prod.sqlite
+      --config /freqtrade/user_data/config.base.json
+      --config /freqtrade/user_data/config.strategyManual.json
+      --config /freqtrade/user_data/config.currencyBTCAll.json
+      --config /freqtrade/user_data/config.exchangeBinance.json
+      --config /freqtrade/user_data/config.private.json
