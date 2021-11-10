@@ -32,14 +32,18 @@ class StrategyDoubleScalper(IStrategy):
         "0" : 0.044
     }
     stoploss = -0.03
-
+    # Trailing stop:
+    trailing_stop = False
+    trailing_stop_positive = 0.02
+    trailing_stop_positive_offset = 0.03
+    trailing_only_offset_is_reached = True
     buy_params = {
         "main_overbought" : 47,
         "main_oversold" : 52,
-        "main_timeperiod" : 14,
+        "main_rsi_timeperiod" : 14,
         "support_overbought" : 60,
         "support_oversold" : 40,
-        "support_timeperiod" : 14
+        "support_rsi_timeperiod" : 14
     }
 
 
@@ -61,8 +65,8 @@ class StrategyDoubleScalper(IStrategy):
         support_dataframe = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.support_timeframe)
         # RSI MAIN
 
-        main_dataframe['main_rsi'] = ta.RSI(main_dataframe['close'],timeperiod=self.buy_params['main_timeperiod'])
-        support_dataframe['support_rsi'] = ta.RSI(support_dataframe['close'],timeperiod=self.buy_params['support_timeperiod'])
+        main_dataframe['main_rsi'] = ta.RSI(main_dataframe['close'],timeperiod=self.buy_params['main_rsi_timeperiod'])
+        support_dataframe['support_rsi'] = ta.RSI(support_dataframe['close'],timeperiod=self.buy_params['support_rsi_timeperiod'])
 
         dataframe = merge_dataframes(
             source=support_dataframe,

@@ -46,6 +46,12 @@ class Balances(BaseModel):
     value: float
     stake: str
     note: str
+    starting_capital: float
+    starting_capital_ratio: float
+    starting_capital_pct: float
+    starting_capital_fiat: float
+    starting_capital_fiat_ratio: float
+    starting_capital_fiat_pct: float
 
 
 class Count(BaseModel):
@@ -57,6 +63,8 @@ class Count(BaseModel):
 class PerformanceEntry(BaseModel):
     pair: str
     profit: float
+    profit_ratio: float
+    profit_pct: float
     profit_abs: float
     count: int
 
@@ -115,7 +123,26 @@ class Daily(BaseModel):
     stake_currency: str
 
 
+class UnfilledTimeout(BaseModel):
+    buy: int
+    sell: int
+    unit: str
+    exit_timeout_count: Optional[int]
+
+
+class OrderTypes(BaseModel):
+    buy: str
+    sell: str
+    emergencysell: Optional[str]
+    forcesell: Optional[str]
+    forcebuy: Optional[str]
+    stoploss: str
+    stoploss_on_exchange: bool
+    stoploss_on_exchange_interval: Optional[int]
+
+
 class ShowConfig(BaseModel):
+    version: str
     dry_run: bool
     stake_currency: str
     stake_amount: Union[float, str]
@@ -128,6 +155,8 @@ class ShowConfig(BaseModel):
     trailing_stop_positive: Optional[float]
     trailing_stop_positive_offset: Optional[float]
     trailing_only_offset_is_reached: Optional[bool]
+    unfilledtimeout: UnfilledTimeout
+    order_types: OrderTypes
     use_custom_stoploss: Optional[bool]
     timeframe: Optional[str]
     timeframe_ms: int
@@ -324,6 +353,7 @@ class PairHistory(BaseModel):
 class BacktestRequest(BaseModel):
     strategy: str
     timeframe: Optional[str]
+    timeframe_detail: Optional[str]
     timerange: Optional[str]
     max_open_trades: Optional[int]
     stake_amount: Optional[Union[float, str]]
@@ -340,3 +370,8 @@ class BacktestResponse(BaseModel):
     trade_count: Optional[float]
     # TODO: Properly type backtestresult...
     backtest_result: Optional[Dict[str, Any]]
+
+
+class SysInfo(BaseModel):
+    cpu_pct: List[float]
+    ram_pct: float

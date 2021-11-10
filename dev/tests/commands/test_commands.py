@@ -8,11 +8,11 @@ from zipfile import ZipFile
 import arrow
 import pytest
 
-from freqtrade.commands import (start_convert_data, start_create_userdir, start_download_data,
-                                start_hyperopt_list, start_hyperopt_show, start_install_ui,
-                                start_list_data, start_list_exchanges, start_list_hyperopts,
-                                start_list_markets, start_list_strategies, start_list_timeframes,
-                                start_new_hyperopt, start_new_strategy, start_show_trades,
+from freqtrade.commands import (start_backtesting_show, start_convert_data, start_convert_trades,
+                                start_create_userdir, start_download_data, start_hyperopt_list,
+                                start_hyperopt_show, start_install_ui, start_list_data,
+                                start_list_exchanges, start_list_markets, start_list_strategies,
+                                start_list_timeframes, start_new_strategy, start_show_trades,
                                 start_test_pairlist, start_trading, start_webserver)
 from freqtrade.commands.deploy_commands import (clean_ui_subdir, download_and_install_ui,
                                                 get_ui_download_url, read_ui_version)
@@ -32,8 +32,6 @@ def test_setup_utils_configuration():
     config = setup_utils_configuration(get_args(args), RunMode.OTHER)
     assert "exchange" in config
     assert config['dry_run'] is True
-    assert config['exchange']['key'] == ''
-    assert config['exchange']['secret'] == ''
 
 
 def test_start_trading_fail(mocker, caplog):
@@ -210,11 +208,10 @@ def test_list_timeframes(mocker, capsys):
     assert re.search(r"^1d$", captured.out, re.MULTILINE)
 
 
-def test_list_markets(mocker, markets, capsys):
+def test_list_markets(mocker, markets_static, capsys):
 
     api_mock = MagicMock()
-    api_mock.markets = markets
-    patch_exchange(mocker, api_mock=api_mock, id='bittrex')
+    patch_exchange(mocker, api_mock=api_mock, id='bittrex', mock_markets=markets_static)
 
     # Test with no --config
     args = [
@@ -239,7 +236,7 @@ def test_list_markets(mocker, markets, capsys):
             "TKN/BTC, XLTCUSDT, XRP/BTC.\n"
             in captured.out)
 
-    patch_exchange(mocker, api_mock=api_mock, id="binance")
+    patch_exchange(mocker, api_mock=api_mock, id="binance", mock_markets=markets_static)
     # Test with --exchange
     args = [
         "list-markets",
@@ -252,7 +249,7 @@ def test_list_markets(mocker, markets, capsys):
     assert re.match("\nExchange Binance has 10 active markets:\n",
                     captured.out)
 
-    patch_exchange(mocker, api_mock=api_mock, id="bittrex")
+    patch_exchange(mocker, api_mock=api_mock, id="bittrex", mock_markets=markets_static)
     # Test with --all: all markets
     args = [
         "list-markets", "--all",
@@ -510,17 +507,6 @@ def test_start_new_strategy(mocker, caplog):
         start_new_strategy(get_args(args))
 
 
-def test_start_new_strategy_DefaultStrat(mocker, caplog):
-    args = [
-        "new-strategy",
-        "--strategy",
-        "DefaultStrategy"
-    ]
-    with pytest.raises(OperationalException,
-                       match=r"DefaultStrategy is not allowed as name\."):
-        start_new_strategy(get_args(args))
-
-
 def test_start_new_strategy_no_arg(mocker, caplog):
     args = [
         "new-strategy",
@@ -528,48 +514,6 @@ def test_start_new_strategy_no_arg(mocker, caplog):
     with pytest.raises(OperationalException,
                        match="`new-strategy` requires --strategy to be set."):
         start_new_strategy(get_args(args))
-
-
-def test_start_new_hyperopt(mocker, caplog):
-    wt_mock = mocker.patch.object(Path, "write_text", MagicMock())
-    mocker.patch.object(Path, "exists", MagicMock(return_value=False))
-
-    args = [
-        "new-hyperopt",
-        "--hyperopt",
-        "CoolNewhyperopt"
-    ]
-    start_new_hyperopt(get_args(args))
-
-    assert wt_mock.call_count == 1
-    assert "CoolNewhyperopt" in wt_mock.call_args_list[0][0][0]
-    assert log_has_re("Writing hyperopt to .*", caplog)
-
-    mocker.patch('freqtrade.commands.deploy_commands.setup_utils_configuration')
-    mocker.patch.object(Path, "exists", MagicMock(return_value=True))
-    with pytest.raises(OperationalException,
-                       match=r".* already exists. Please choose another Hyperopt Name\."):
-        start_new_hyperopt(get_args(args))
-
-
-def test_start_new_hyperopt_DefaultHyperopt(mocker, caplog):
-    args = [
-        "new-hyperopt",
-        "--hyperopt",
-        "DefaultHyperopt"
-    ]
-    with pytest.raises(OperationalException,
-                       match=r"DefaultHyperopt is not allowed as name\."):
-        start_new_hyperopt(get_args(args))
-
-
-def test_start_new_hyperopt_no_arg(mocker):
-    args = [
-        "new-hyperopt",
-    ]
-    with pytest.raises(OperationalException,
-                       match="`new-hyperopt` requires --hyperopt to be set."):
-        start_new_hyperopt(get_args(args))
 
 
 def test_start_install_ui(mocker):
@@ -661,16 +605,33 @@ def test_get_ui_download_url(mocker):
 def test_get_ui_download_url_direct(mocker):
     response = MagicMock()
     response.json = MagicMock(
-        side_effect=[[{
-            'assets_url': 'http://whatever.json',
-            'name': '0.0.1',
-            'assets': [{'browser_download_url': 'http://download11.zip'}]}]])
+        return_value=[
+            {
+                'assets_url': 'http://whatever.json',
+                'name': '0.0.2',
+                'assets': [{'browser_download_url': 'http://download22.zip'}]
+            },
+            {
+                'assets_url': 'http://whatever.json',
+                'name': '0.0.1',
+                'assets': [{'browser_download_url': 'http://download1.zip'}]
+            },
+        ])
     get_mock = mocker.patch("freqtrade.commands.deploy_commands.requests.get",
                             return_value=response)
     x, last_version = get_ui_download_url()
     assert get_mock.call_count == 1
+    assert last_version == '0.0.2'
+    assert x == 'http://download22.zip'
+    get_mock.reset_mock()
+    response.json.reset_mock()
+
+    x, last_version = get_ui_download_url('0.0.1')
     assert last_version == '0.0.1'
-    assert x == 'http://download11.zip'
+    assert x == 'http://download1.zip'
+
+    with pytest.raises(ValueError, match="UI-Version not found."):
+        x, last_version = get_ui_download_url('0.0.3')
 
 
 def test_download_data_keyboardInterrupt(mocker, caplog, markets):
@@ -793,6 +754,46 @@ def test_download_data_no_pairs(mocker, caplog):
         start_download_data(pargs)
 
 
+def test_download_data_all_pairs(mocker, markets):
+
+    mocker.patch.object(Path, "exists", MagicMock(return_value=False))
+
+    dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+                           MagicMock(return_value=["ETH/BTC", "XRP/BTC"]))
+    patch_exchange(mocker)
+    mocker.patch(
+        'freqtrade.exchange.Exchange.markets', PropertyMock(return_value=markets)
+    )
+    args = [
+        "download-data",
+        "--exchange",
+        "binance",
+        "--pairs",
+        ".*/USDT"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_download_data(pargs)
+    expected = set(['ETH/USDT', 'XRP/USDT', 'NEO/USDT', 'TKN/USDT'])
+    assert set(dl_mock.call_args_list[0][1]['pairs']) == expected
+    assert dl_mock.call_count == 1
+
+    dl_mock.reset_mock()
+    args = [
+        "download-data",
+        "--exchange",
+        "binance",
+        "--pairs",
+        ".*/USDT",
+        "--include-inactive-pairs",
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_download_data(pargs)
+    expected = set(['ETH/USDT', 'LTC/USDT', 'XRP/USDT', 'NEO/USDT', 'TKN/USDT'])
+    assert set(dl_mock.call_args_list[0][1]['pairs']) == expected
+
+
 def test_download_data_trades(mocker, caplog):
     dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_trades_data',
                            MagicMock(return_value=[]))
@@ -815,6 +816,22 @@ def test_download_data_trades(mocker, caplog):
     assert convert_mock.call_count == 1
 
 
+def test_start_convert_trades(mocker, caplog):
+    convert_mock = mocker.patch('freqtrade.commands.data_commands.convert_trades_to_ohlcv',
+                                MagicMock(return_value=[]))
+    patch_exchange(mocker)
+    mocker.patch(
+        'freqtrade.exchange.Exchange.markets', PropertyMock(return_value={})
+    )
+    args = [
+        "trades-to-ohlcv",
+        "--exchange", "kraken",
+        "--pairs", "ETH/BTC", "XRP/BTC",
+    ]
+    start_convert_trades(get_args(args))
+    assert convert_mock.call_count == 1
+
+
 def test_start_list_strategies(mocker, caplog, capsys):
 
     args = [
@@ -827,9 +844,9 @@ def test_start_list_strategies(mocker, caplog, capsys):
     # pargs['config'] = None
     start_list_strategies(pargs)
     captured = capsys.readouterr()
-    assert "TestStrategyLegacy" in captured.out
-    assert "legacy_strategy.py" not in captured.out
-    assert "DefaultStrategy" in captured.out
+    assert "TestStrategyLegacyV1" in captured.out
+    assert "legacy_strategy_v1.py" not in captured.out
+    assert "StrategyTestV2" in captured.out
 
     # Test regular output
     args = [
@@ -842,41 +859,24 @@ def test_start_list_strategies(mocker, caplog, capsys):
     # pargs['config'] = None
     start_list_strategies(pargs)
     captured = capsys.readouterr()
-    assert "TestStrategyLegacy" in captured.out
-    assert "legacy_strategy.py" in captured.out
-    assert "DefaultStrategy" in captured.out
+    assert "TestStrategyLegacyV1" in captured.out
+    assert "legacy_strategy_v1.py" in captured.out
+    assert "StrategyTestV2" in captured.out
 
-
-def test_start_list_hyperopts(mocker, caplog, capsys):
-
+    # Test color output
     args = [
-        "list-hyperopts",
-        "--hyperopt-path",
-        str(Path(__file__).parent.parent / "optimize" / "hyperopts"),
-        "-1"
+        "list-strategies",
+        "--strategy-path",
+        str(Path(__file__).parent.parent / "strategy" / "strats"),
     ]
     pargs = get_args(args)
     # pargs['config'] = None
-    start_list_hyperopts(pargs)
+    start_list_strategies(pargs)
     captured = capsys.readouterr()
-    assert "TestHyperoptLegacy" not in captured.out
-    assert "legacy_hyperopt.py" not in captured.out
-    assert "DefaultHyperOpt" in captured.out
-    assert "test_hyperopt.py" not in captured.out
-
-    # Test regular output
-    args = [
-        "list-hyperopts",
-        "--hyperopt-path",
-        str(Path(__file__).parent.parent / "optimize" / "hyperopts"),
-    ]
-    pargs = get_args(args)
-    # pargs['config'] = None
-    start_list_hyperopts(pargs)
-    captured = capsys.readouterr()
-    assert "TestHyperoptLegacy" not in captured.out
-    assert "legacy_hyperopt.py" not in captured.out
-    assert "DefaultHyperOpt" in captured.out
+    assert "TestStrategyLegacyV1" in captured.out
+    assert "legacy_strategy_v1.py" in captured.out
+    assert "StrategyTestV2" in captured.out
+    assert "LOAD FAILED" in captured.out
 
 
 def test_start_test_pairlist(mocker, caplog, tickers, default_conf, capsys):
@@ -1389,3 +1389,19 @@ def test_show_trades(mocker, fee, capsys, caplog):
 
     with pytest.raises(OperationalException, match=r"--db-url is required for this command."):
         start_show_trades(pargs)
+
+
+def test_backtesting_show(mocker, testdatadir, capsys):
+    sbr = mocker.patch('freqtrade.optimize.optimize_reports.show_backtest_results')
+    args = [
+        "backtesting-show",
+        "--export-filename",
+        f"{testdatadir / 'backtest-result_new.json'}",
+        "--show-pair-list"
+    ]
+    pargs = get_args(args)
+    pargs['config'] = None
+    start_backtesting_show(pargs)
+    assert sbr.call_count == 1
+    out, err = capsys.readouterr()
+    assert "Pairs for Strategy" in out

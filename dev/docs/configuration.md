@@ -37,6 +37,15 @@ Using this scheme, all configuration settings will also be available as environm
 
 Please note that Environment variables will overwrite corresponding settings in your configuration, but command line Arguments will always win.
 
+Common example:
+
+```
+FREQTRADE__TELEGRAM__CHAT_ID=<telegramchatid>
+FREQTRADE__TELEGRAM__TOKEN=<telegramToken>
+FREQTRADE__EXCHANGE__KEY=<yourExchangeKey>
+FREQTRADE__EXCHANGE__SECRET=<yourExchangeSecret>
+```
+
 !!! Note
     Environment variables detected are logged at startup - so if you can't find why a value is not what you think it should be based on the configuration, make sure it's not loaded from an environment variable.
 
@@ -93,6 +102,7 @@ Mandatory parameters are marked as **Required**, which means that they are requi
 | `unfilledtimeout.buy` | **Required.** How long (in minutes or seconds) the bot will wait for an unfilled buy order to complete, after which the order will be cancelled and repeated at current (new) price, as long as there is a signal. [Strategy Override](#parameters-in-the-strategy).<br> **Datatype:** Integer
 | `unfilledtimeout.sell` | **Required.** How long (in minutes or seconds) the bot will wait for an unfilled sell order to complete, after which the order will be cancelled and repeated at current (new) price, as long as there is a signal. [Strategy Override](#parameters-in-the-strategy).<br> **Datatype:** Integer
 | `unfilledtimeout.unit` | Unit to use in unfilledtimeout setting. Note: If you set unfilledtimeout.unit to "seconds", "internals.process_throttle_secs" must be inferior or equal to timeout [Strategy Override](#parameters-in-the-strategy). <br> *Defaults to `minutes`.* <br> **Datatype:** String
+| `unfilledtimeout.exit_timeout_count` | How many times can exit orders time out. Once this number of timeouts is reached, an emergency sell is triggered. 0 to disable and allow unlimited order cancels. [Strategy Override](#parameters-in-the-strategy).<br>*Defaults to `0`.* <br> **Datatype:** Integer
 | `bid_strategy.price_side` | Select the side of the spread the bot should look at to get the buy rate. [More information below](#buy-price-side).<br> *Defaults to `bid`.* <br> **Datatype:** String (either `ask` or `bid`).
 | `bid_strategy.ask_last_balance` | **Required.** Interpolate the bidding price. More information [below](#buy-price-without-orderbook-enabled).
 | `bid_strategy.use_order_book` | Enable buying using the rates in [Order Book Bids](#buy-price-with-orderbook-enabled). <br> **Datatype:** Boolean
@@ -204,7 +214,7 @@ With a reserve of 5%, the minimum stake amount would be ~12.6$ (`12 * (1 + 0.05)
 To limit this calculation in case of large stoploss values, the calculated minimum stake-limit will never be more than 50% above the real limit.
 
 !!! Warning
-    Since the limits on exchanges are usually stable and are not updated often, some pairs can show pretty high minimum limits, simply because the price increased a lot since the last limit adjustment by the exchange.
+    Since the limits on exchanges are usually stable and are not updated often, some pairs can show pretty high minimum limits, simply because the price increased a lot since the last limit adjustment by the exchange. Freqtrade adjusts the stake-amount to this value, unless it's > 30% more than the calculated/desired stake-amount - in which case the trade is rejected.
 
 #### Tradable balance
 
@@ -444,47 +454,8 @@ The possible values are: `gtc` (default), `fok` or `ioc`.
 ```
 
 !!! Warning
-    This is ongoing work. For now, it is supported only for binance.
-    Please don't change the default value unless you know what you are doing and have researched the impact of using different values.
-
-### Exchange configuration
-
-Freqtrade is based on [CCXT library](https://github.com/ccxt/ccxt) that supports over 100 cryptocurrency
-exchange markets and trading APIs. The complete up-to-date list can be found in the
-[CCXT repo homepage](https://github.com/ccxt/ccxt/tree/master/python).
- However, the bot was tested by the development team with only Bittrex, Binance and Kraken,
- so these are the only officially supported exchanges:
-
-- [Bittrex](https://bittrex.com/): "bittrex"
-- [Binance](https://www.binance.com/): "binance"
-- [Kraken](https://kraken.com/): "kraken"
-
-Feel free to test other exchanges and submit your PR to improve the bot.
-
-Some exchanges require special configuration, which can be found on the [Exchange-specific Notes](exchanges.md) documentation page.
-
-#### Sample exchange configuration
-
-A exchange configuration for "binance" would look as follows:
-
-```json
-"exchange": {
-    "name": "binance",
-    "key": "your_exchange_key",
-    "secret": "your_exchange_secret",
-    "ccxt_config": {"enableRateLimit": true},
-    "ccxt_async_config": {
-        "enableRateLimit": true,
-        "rateLimit": 200
-    },
-```
-
-This configuration enables binance, as well as rate-limiting to avoid bans from the exchange.
-`"rateLimit": 200` defines a wait-event of 0.2s between each call. This can also be completely disabled by setting `"enableRateLimit"` to false.
-
-!!! Note
-    Optimal settings for rate-limiting depend on the exchange and the size of the whitelist, so an ideal parameter will vary on many other settings.
-    We try to provide sensible defaults per exchange where possible, if you encounter bans please make sure that `"enableRateLimit"` is enabled and increase the `"rateLimit"` parameter step by step.
+    This is ongoing work. For now, it is supported only for binance and kucoin.
+    Please don't change the default value unless you know what you are doing and have researched the impact of using different values for your particular exchange.
 
 ### What values can be used for fiat_display_currency?
 
