@@ -31,7 +31,7 @@ class StrategyKlingerStochWBtc(IStrategy):
     ignore_roi_if_buy_signal = False
     ignore_buying_expired_candle_after = 30
     # Number of candles the strategy requires before producing valid signals
-    startup_candle_count: int = 55
+    startup_candle_count: 55
 
     # ROI table:
     minimal_roi = {
