@@ -18,8 +18,8 @@ class StrategyDoubleScalper(IStrategy):
 
     # Optimal ticker interval for the strategy.
     timeframe = '5m'
-    timeframe_main = '15m'
-    timeframe_support = '12h'
+    main_timeframe = '15m'
+    support_timeframe = '12h'
     # These values can be overridden in the "ask_strategy" section in the config.
     use_sell_signal = False
     sell_profit_only = False
@@ -46,8 +46,8 @@ class StrategyDoubleScalper(IStrategy):
 
     def informative_pairs(self):
         pairs = self.dp.current_whitelist()
-        informative_pairs = [(pair, self.timeframe_main) for pair in pairs] + \
-                            [(pair, self.timeframe_support) for pair in pairs]
+        informative_pairs = [(pair, self.main_timeframe) for pair in pairs] + \
+                            [(pair, self.support_timeframe) for pair in pairs]
         return informative_pairs
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -57,25 +57,23 @@ class StrategyDoubleScalper(IStrategy):
         if not self.dp:
             return dataframe
 
-        dataframe_main = self.dp.get_pair_dataframe(pair=metadata['pair'],timeframe=self.timeframe_main)
-        dataframe_support = self.dp.get_pair_dataframe(pair=metadata['pair'],timeframe=self.timeframe_support)
+        main_dataframe = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.main_timeframe)
+        support_dataframe = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=self.support_timeframe)
         # RSI MAIN
 
-        timeperiod_main = 14
-        timeperiod_support = 14
-        dataframe_main['main_rsi'] = ta.RSI(dataframe_main['close'],timeperiod=timeperiod_main)
-        dataframe_support['support_rsi'] = ta.RSI(dataframe_support['close'],timeperiod=timeperiod_support)
+        main_dataframe['main_rsi'] = ta.RSI(main_dataframe['close'],timeperiod=self.buy_params['main_timeperiod'])
+        support_dataframe['support_rsi'] = ta.RSI(support_dataframe['close'],timeperiod=self.buy_params['support_timeperiod'])
 
         dataframe = merge_dataframes(
-            source=dataframe_support,
-            sourceTimeframe=self.timeframe_support,
+            source=support_dataframe,
+            sourceTimeframe=self.support_timeframe,
             destination=dataframe,
             destinationTimeFrame=self.timeframe
         )
 
         dataframe = merge_dataframes(
-            source=dataframe_main,
-            sourceTimeframe=self.timeframe_main,
+            source=main_dataframe,
+            sourceTimeframe=self.main_timeframe,
             destination=dataframe,
             destinationTimeFrame=self.timeframe
         )
@@ -87,9 +85,11 @@ class StrategyDoubleScalper(IStrategy):
 
         conditions.append(dataframe["volume"] > 0)
         conditions.append(dataframe["close"] > minimum_coin_price)
-        conditions.append(dataframe["rsi_main"] > self.buy_params["main_oversold"])
-        conditions.append(dataframe["rsi_support"] > self.buy_params["support_overbought"])
+        conditions.append(dataframe["main_rsi"] > self.buy_params["main_oversold"])
+        conditions.append(dataframe["support_rsi"] > self.buy_params["support_overbought"])
 
         if conditions:
             dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
+        return dataframe
+    def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         return dataframe
