@@ -1,5 +1,0 @@
-{
-  "timeframe" : "5m",
-  //"hyperopt_loss" : "ShortTradeDurHyperOptLoss"
-  "hyperopt_loss" : "SortinoHyperOptLossDaily"
-}
