@@ -11,8 +11,7 @@ import pytest
 from jsonschema import ValidationError
 
 from freqtrade.commands import Arguments
-from freqtrade.configuration import (Configuration, check_exchange, remove_credentials,
-                                     validate_config_consistency)
+from freqtrade.configuration import Configuration, check_exchange, validate_config_consistency
 from freqtrade.configuration.config_validation import validate_config_schema
 from freqtrade.configuration.deprecated_settings import (check_conflicting_settings,
                                                          process_deprecated_setting,
@@ -404,7 +403,7 @@ def test_setup_configuration_without_arguments(mocker, default_conf, caplog) -> 
     arglist = [
         'backtesting',
         '--config', 'config.json',
-        '--strategy', 'DefaultStrategy',
+        '--strategy', 'StrategyTestV2',
     ]
 
     args = Arguments(arglist).get_parsed_arg()
@@ -441,7 +440,7 @@ def test_setup_configuration_with_arguments(mocker, default_conf, caplog) -> Non
     arglist = [
         'backtesting',
         '--config', 'config.json',
-        '--strategy', 'DefaultStrategy',
+        '--strategy', 'StrategyTestV2',
         '--datadir', '/foo/bar',
         '--userdir', "/tmp/freqtrade",
         '--ticker-interval', '1m',
@@ -498,7 +497,7 @@ def test_setup_configuration_with_stratlist(mocker, default_conf, caplog) -> Non
         '--ticker-interval', '1m',
         '--export', 'trades',
         '--strategy-list',
-        'DefaultStrategy',
+        'StrategyTestV2',
         'TestStrategy'
     ]
 
@@ -615,18 +614,6 @@ def test_check_exchange(default_conf, caplog) -> None:
     with pytest.raises(OperationalException,
                        match=r'This command requires a configured exchange.*'):
         check_exchange(default_conf)
-
-
-def test_remove_credentials(default_conf, caplog) -> None:
-    conf = deepcopy(default_conf)
-    conf['dry_run'] = False
-    remove_credentials(conf)
-
-    assert conf['dry_run'] is True
-    assert conf['exchange']['key'] == ''
-    assert conf['exchange']['secret'] == ''
-    assert conf['exchange']['password'] == ''
-    assert conf['exchange']['uid'] == ''
 
 
 def test_cli_verbose_with_params(default_conf, mocker, caplog) -> None:
@@ -1372,6 +1359,7 @@ def test_flat_vars_to_nested_dict(caplog):
         'FREQTRADE__ASK_STRATEGY__PRICE_SIDE': 'bid',
         'FREQTRADE__ASK_STRATEGY__cccc': '500',
         'FREQTRADE__STAKE_AMOUNT': '200.05',
+        'FREQTRADE__TELEGRAM__CHAT_ID': '2151',
         'NOT_RELEVANT': '200.0',  # Will be ignored
     }
     expected = {
@@ -1386,6 +1374,9 @@ def test_flat_vars_to_nested_dict(caplog):
             },
             'some_setting': True,
             'some_false_setting': False,
+        },
+        'telegram': {
+            'chat_id': '2151'
         }
     }
     res = flat_vars_to_nested_dict(test_args, ENV_VAR_PREFIX)

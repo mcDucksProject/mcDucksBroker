@@ -104,13 +104,13 @@ class StrategyScalpingFast2(IStrategy):
         conditions.append(dataframe['open'] < dataframe['ema_low'])
         conditions.append(dataframe['resample_sma'] < dataframe['close'])
 
-        if self.buy_params['adx-enabled'] == True:
+        if self.buy_params['adx-enabled']:
             conditions.append(dataframe["adx"] < self.buy_params['adx-value'])
-        if self.buy_params['mfi-enabled'] == True:
+        if self.buy_params['mfi-enabled']:
             conditions.append(dataframe['mfi'] < self.buy_params['mfi-value'])
-        if self.buy_params['fastk-enabled'] == True:
+        if self.buy_params['fastk-enabled']:
             conditions.append(dataframe['fastk'] < self.buy_params['fastk-value'])
-        if self.buy_params['fastd-enabled'] == True:
+        if self.buy_params['fastd-enabled']:
             conditions.append(dataframe['fastd'] < self.buy_params['fastd-value'])
         if self.buy_params['fastk-enabled'] == True & self.buy_params['fastd-enabled'] == True:
             conditions.append(qtpylib.crossed_above(dataframe['fastk'], dataframe['fastd']))

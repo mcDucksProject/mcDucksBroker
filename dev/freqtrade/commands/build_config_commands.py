@@ -61,27 +61,41 @@ def ask_user_config() -> Dict[str, Any]:
             "type": "text",
             "name": "stake_currency",
             "message": "Please insert your stake currency:",
-            "default": 'BTC',
+            "default": 'USDT',
         },
         {
             "type": "text",
             "name": "stake_amount",
-            "message": "Please insert your stake amount:",
-            "default": "0.01",
+            "message": f"Please insert your stake amount (Number or '{UNLIMITED_STAKE_AMOUNT}'):",
+            "default": "100",
             "validate": lambda val: val == UNLIMITED_STAKE_AMOUNT or validate_is_float(val),
+            "filter": lambda val: '"' + UNLIMITED_STAKE_AMOUNT + '"'
+            if val == UNLIMITED_STAKE_AMOUNT
+            else val
         },
         {
             "type": "text",
             "name": "max_open_trades",
             "message": f"Please insert max_open_trades (Integer or '{UNLIMITED_STAKE_AMOUNT}'):",
             "default": "3",
-            "validate": lambda val: val == UNLIMITED_STAKE_AMOUNT or validate_is_int(val)
+            "validate": lambda val: val == UNLIMITED_STAKE_AMOUNT or validate_is_int(val),
+            "filter": lambda val: '"' + UNLIMITED_STAKE_AMOUNT + '"'
+            if val == UNLIMITED_STAKE_AMOUNT
+            else val
+        },
+        {
+            "type": "select",
+            "name": "timeframe_in_config",
+            "message": "Tim",
+            "choices": ["Have the strategy define timeframe.", "Override in configuration."]
         },
         {
             "type": "text",
             "name": "timeframe",
             "message": "Please insert your desired timeframe (e.g. 5m):",
             "default": "5m",
+            "when": lambda x: x["timeframe_in_config"] == 'Override in configuration.'
+
         },
         {
             "type": "text",
@@ -99,6 +113,9 @@ def ask_user_config() -> Dict[str, Any]:
                 "bittrex",
                 "kraken",
                 "ftx",
+                "kucoin",
+                "gateio",
+                "okex",
                 Separator(),
                 "other",
             ],
@@ -121,6 +138,12 @@ def ask_user_config() -> Dict[str, Any]:
             "name": "exchange_secret",
             "message": "Insert Exchange Secret",
             "when": lambda x: not x['dry_run']
+        },
+        {
+            "type": "password",
+            "name": "exchange_key_password",
+            "message": "Insert Exchange API Key password",
+            "when": lambda x: not x['dry_run'] and x['exchange_name'] in ('kucoin', 'okex')
         },
         {
             "type": "confirm",
@@ -149,7 +172,8 @@ def ask_user_config() -> Dict[str, Any]:
         {
             "type": "text",
             "name": "api_server_listen_addr",
-            "message": "Insert Api server Listen Address (best left untouched default!)",
+            "message": ("Insert Api server Listen Address (0.0.0.0 for docker, "
+                        "otherwise best left untouched)"),
             "default": "127.0.0.1",
             "when": lambda x: x['api_server']
         },

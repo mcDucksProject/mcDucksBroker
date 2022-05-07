@@ -19,6 +19,9 @@ from freqtrade.exchange import timeframe_to_minutes, timeframe_to_seconds
 from freqtrade.exchange.exchange import timeframe_to_next_date
 from freqtrade.persistence import PairLocks, Trade
 from freqtrade.strategy.hyper import HyperStrategyMixin
+from freqtrade.strategy.informative_decorator import (InformativeData, PopulateIndicators,
+                                                      _create_and_merge_informative_pair,
+                                                      _format_pair_name)
 from freqtrade.strategy.strategy_wrapper import strategy_safe_wrapper
 from freqtrade.wallets import Wallets
 
@@ -62,9 +65,9 @@ class IStrategy(ABC, HyperStrategyMixin):
     _populate_fun_len: int = 0
     _buy_fun_len: int = 0
     _sell_fun_len: int = 0
-    _ft_params_from_file: Dict = {}
+    _ft_params_from_file: Dict
     # associated minimal roi
-    minimal_roi: Dict
+    minimal_roi: Dict = {}
 
     # associated stoploss
     stoploss: float
@@ -118,8 +121,10 @@ class IStrategy(ABC, HyperStrategyMixin):
     # Class level variables (intentional) containing
     # the dataprovider (dp) (access to other candles, historic data, ...)
     # and wallets - access to the current balance.
-    dp: Optional[DataProvider] = None
+    dp: Optional[DataProvider]
     wallets: Optional[Wallets] = None
+    # Filled from configuration
+    stake_currency: str
     # container variable for strategy source code
     __source__: str = ''
 
@@ -131,6 +136,24 @@ class IStrategy(ABC, HyperStrategyMixin):
         # Dict to determine if analysis is necessary
         self._last_candle_seen_per_pair: Dict[str, datetime] = {}
         super().__init__(config)
+
+        # Gather informative pairs from @informative-decorated methods.
+        self._ft_informative: List[Tuple[InformativeData, PopulateIndicators]] = []
+        for attr_name in dir(self.__class__):
+            cls_method = getattr(self.__class__, attr_name)
+            if not callable(cls_method):
+                continue
+            informative_data_list = getattr(cls_method, '_ft_informative', None)
+            if not isinstance(informative_data_list, list):
+                # Type check is required because mocker would return a mock object that evaluates to
+                # True, confusing this code.
+                continue
+            strategy_timeframe_minutes = timeframe_to_minutes(self.timeframe)
+            for informative_data in informative_data_list:
+                if timeframe_to_minutes(informative_data.timeframe) < strategy_timeframe_minutes:
+                    raise OperationalException('Informative timeframe must be equal or higher than '
+                                               'strategy timeframe!')
+                self._ft_informative.append((informative_data, cls_method))
 
     @abstractmethod
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -375,6 +398,23 @@ class IStrategy(ABC, HyperStrategyMixin):
 # END - Intended to be overridden by strategy
 ###
 
+    def gather_informative_pairs(self) -> ListPairsWithTimeframes:
+        """
+        Internal method which gathers all informative pairs (user or automatically defined).
+        """
+        informative_pairs = self.informative_pairs()
+        for inf_data, _ in self._ft_informative:
+            if inf_data.asset:
+                pair_tf = (_format_pair_name(self.config, inf_data.asset), inf_data.timeframe)
+                informative_pairs.append(pair_tf)
+            else:
+                if not self.dp:
+                    raise OperationalException('@informative decorator with unspecified asset '
+                                               'requires DataProvider instance.')
+                for pair in self.dp.current_whitelist():
+                    informative_pairs.append((pair, inf_data.timeframe))
+        return list(set(informative_pairs))
+
     def get_strategy_name(self) -> str:
         """
         Returns strategy class name
@@ -402,6 +442,15 @@ class IStrategy(ABC, HyperStrategyMixin):
         :param pair: Unlock pair to allow trading again
         """
         PairLocks.unlock_pair(pair, datetime.now(timezone.utc))
+
+    def unlock_reason(self, reason: str) -> None:
+        """
+        Unlocks all pairs previously locked using lock_pair with specified reason.
+        Not used by freqtrade itself, but intended to be used if users lock pairs
+        manually from within the strategy, to allow an easy way to unlock pairs.
+        :param reason: Unlock pairs to allow trading again
+        """
+        PairLocks.unlock_reason(reason, datetime.now(timezone.utc))
 
     def is_pair_locked(self, pair: str, candle_date: datetime = None) -> bool:
         """
@@ -460,6 +509,7 @@ class IStrategy(ABC, HyperStrategyMixin):
             dataframe['buy'] = 0
             dataframe['sell'] = 0
             dataframe['buy_tag'] = None
+            dataframe['exit_tag'] = None
 
         # Other Defs in strategy that want to be called every loop here
         # twitter_sell = self.watch_twitter_feed(dataframe, metadata)
@@ -537,7 +587,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         pair: str,
         timeframe: str,
         dataframe: DataFrame
-    ) -> Tuple[bool, bool, Optional[str]]:
+    ) -> Tuple[bool, bool, Optional[str], Optional[str]]:
         """
         Calculates current signal based based on the buy / sell columns of the dataframe.
         Used by Bot to get the signal to buy or sell
@@ -548,7 +598,7 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         if not isinstance(dataframe, DataFrame) or dataframe.empty:
             logger.warning(f'Empty candle (OHLCV) data for pair {pair}')
-            return False, False, None
+            return False, False, None, None
 
         latest_date = dataframe['date'].max()
         latest = dataframe.loc[dataframe['date'] == latest_date].iloc[-1]
@@ -563,7 +613,7 @@ class IStrategy(ABC, HyperStrategyMixin):
                 'Outdated history for pair %s. Last tick is %s minutes old',
                 pair, int((arrow.utcnow() - latest_date).total_seconds() // 60)
             )
-            return False, False, None
+            return False, False, None, None
 
         buy = latest[SignalType.BUY.value] == 1
 
@@ -572,6 +622,7 @@ class IStrategy(ABC, HyperStrategyMixin):
             sell = latest[SignalType.SELL.value] == 1
 
         buy_tag = latest.get(SignalTagType.BUY_TAG.value, None)
+        exit_tag = latest.get(SignalTagType.EXIT_TAG.value, None)
 
         logger.debug('trigger: %s (pair=%s) buy=%s sell=%s',
                      latest['date'], pair, str(buy), str(sell))
@@ -580,8 +631,8 @@ class IStrategy(ABC, HyperStrategyMixin):
                                       current_time=datetime.now(timezone.utc),
                                       timeframe_seconds=timeframe_seconds,
                                       buy=buy):
-            return False, sell, buy_tag
-        return buy, sell, buy_tag
+            return False, sell, buy_tag, exit_tag
+        return buy, sell, buy_tag, exit_tag
 
     def ignore_expired_candle(self, latest_date: datetime, current_time: datetime,
                               timeframe_seconds: int, buy: bool):
@@ -775,10 +826,11 @@ class IStrategy(ABC, HyperStrategyMixin):
         Does not run advise_buy or advise_sell!
         Used by optimize operations only, not during dry / live runs.
         Using .copy() to get a fresh copy of the dataframe for every strategy run.
+        Also copy on output to avoid PerformanceWarnings pandas 1.3.0 started to show.
         Has positive effects on memory usage for whatever reason - also when
         using only one strategy.
         """
-        return {pair: self.advise_indicators(pair_data.copy(), {'pair': pair})
+        return {pair: self.advise_indicators(pair_data.copy(), {'pair': pair}).copy()
                 for pair, pair_data in data.items()}
 
     def advise_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -790,6 +842,12 @@ class IStrategy(ABC, HyperStrategyMixin):
         :return: a Dataframe with all mandatory indicators for the strategies
         """
         logger.debug(f"Populating indicators for pair {metadata.get('pair')}.")
+
+        # call populate_indicators_Nm() which were tagged with @informative decorator.
+        for inf_data, populate_fn in self._ft_informative:
+            dataframe = _create_and_merge_informative_pair(
+                self, dataframe, metadata, inf_data, populate_fn)
+
         if self._populate_fun_len == 2:
             warnings.warn("deprecated - check out the Sample strategy to see "
                           "the current function headers!", DeprecationWarning)

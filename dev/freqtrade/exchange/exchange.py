@@ -7,7 +7,7 @@ import http
 import inspect
 import logging
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from math import ceil
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -19,15 +19,16 @@ from ccxt.base.decimal_to_precision import (ROUND_DOWN, ROUND_UP, TICK_SIZE, TRU
                                             decimal_to_precision)
 from pandas import DataFrame
 
-from freqtrade.constants import DEFAULT_AMOUNT_RESERVE_PERCENT, ListPairsWithTimeframes
+from freqtrade.constants import (DEFAULT_AMOUNT_RESERVE_PERCENT, NON_OPEN_EXCHANGE_STATES,
+                                 ListPairsWithTimeframes)
 from freqtrade.data.converter import ohlcv_to_dataframe, trades_dict_to_list
 from freqtrade.exceptions import (DDosProtection, ExchangeError, InsufficientFundsError,
                                   InvalidOrderException, OperationalException, PricingError,
                                   RetryableOrderError, TemporaryError)
 from freqtrade.exchange.common import (API_FETCH_ORDER_RETRY_COUNT, BAD_EXCHANGES,
-                                       EXCHANGE_HAS_OPTIONAL, EXCHANGE_HAS_REQUIRED, retrier,
-                                       retrier_async)
-from freqtrade.misc import deep_merge_dicts, safe_value_fallback2
+                                       EXCHANGE_HAS_OPTIONAL, EXCHANGE_HAS_REQUIRED,
+                                       remove_credentials, retrier, retrier_async)
+from freqtrade.misc import chunks, deep_merge_dicts, safe_value_fallback2
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 
 
@@ -53,12 +54,16 @@ class Exchange:
     # Parameters to add directly to buy/sell calls (like agreeing to trading agreement)
     _params: Dict = {}
 
+    # Additional headers - added to the ccxt object
+    _headers: Dict = {}
+
     # Dict to specify which options each exchange implements
     # This defines defaults, which can be selectively overridden by subclasses using _ft_has
     # or by specifying them in the configuration.
     _ft_has_default: Dict = {
         "stoploss_on_exchange": False,
         "order_time_in_force": ["gtc"],
+        "time_in_force_parameter": "timeInForce",
         "ohlcv_params": {},
         "ohlcv_candle_limit": 500,
         "ohlcv_partial_candle": True,
@@ -99,6 +104,7 @@ class Exchange:
 
         # Holds all open sell orders for dry_run
         self._dry_run_open_orders: Dict[str, Any] = {}
+        remove_credentials(config)
 
         if config['dry_run']:
             logger.info('Instance is running with dry_run enabled')
@@ -149,8 +155,8 @@ class Exchange:
                 self.validate_pairs(config['exchange']['pair_whitelist'])
             self.validate_ordertypes(config.get('order_types', {}))
             self.validate_order_time_in_force(config.get('order_time_in_force', {}))
-            self.validate_required_startup_candles(config.get('startup_candle_count', 0),
-                                                   config.get('timeframe', ''))
+            self.required_candle_call_count = self.validate_required_startup_candles(
+                config.get('startup_candle_count', 0), config.get('timeframe', ''))
 
         # Converts the interval provided in minutes in config to seconds
         self.markets_refresh_interval: int = exchange_config.get(
@@ -168,7 +174,7 @@ class Exchange:
             asyncio.get_event_loop().run_until_complete(self._api_async.close())
 
     def _init_ccxt(self, exchange_config: Dict[str, Any], ccxt_module: CcxtModuleType = ccxt,
-                   ccxt_kwargs: dict = None) -> ccxt.Exchange:
+                   ccxt_kwargs: Dict = {}) -> ccxt.Exchange:
         """
         Initialize ccxt with given config and return valid
         ccxt instance.
@@ -187,6 +193,10 @@ class Exchange:
         }
         if ccxt_kwargs:
             logger.info('Applying additional ccxt config: %s', ccxt_kwargs)
+        if self._headers:
+            # Inject static headers after the above output to not confuse users.
+            ccxt_kwargs = deep_merge_dicts({'headers': self._headers}, ccxt_kwargs)
+        if ccxt_kwargs:
             ex_config.update(ccxt_kwargs)
         try:
 
@@ -351,9 +361,16 @@ class Exchange:
     def validate_stakecurrency(self, stake_currency: str) -> None:
         """
         Checks stake-currency against available currencies on the exchange.
+        Only runs on startup. If markets have not been loaded, there's been a problem with
+        the connection to the exchange.
         :param stake_currency: Stake-currency to validate
         :raise: OperationalException if stake-currency is not available.
         """
+        if not self._markets:
+            raise OperationalException(
+                'Could not load markets, therefore cannot start. '
+                'Please investigate the above error for more details.'
+                )
         quote_currencies = self.get_quote_currencies()
         if stake_currency not in quote_currencies:
             raise OperationalException(
@@ -454,16 +471,29 @@ class Exchange:
             raise OperationalException(
                 f'Time in force policies are not supported for {self.name} yet.')
 
-    def validate_required_startup_candles(self, startup_candles: int, timeframe: str) -> None:
+    def validate_required_startup_candles(self, startup_candles: int, timeframe: str) -> int:
         """
         Checks if required startup_candles is more than ohlcv_candle_limit().
         Requires a grace-period of 5 candles - so a startup-period up to 494 is allowed by default.
         """
         candle_limit = self.ohlcv_candle_limit(timeframe)
-        if startup_candles + 5 > candle_limit:
+        # Require one more candle - to account for the still open candle.
+        candle_count = startup_candles + 1
+        # Allow 5 calls to the exchange per pair
+        required_candle_call_count = int(
+            (candle_count / candle_limit) + (0 if candle_count % candle_limit == 0 else 1))
+
+        if required_candle_call_count > 5:
+            # Only allow 5 calls per pair to somewhat limit the impact
             raise OperationalException(
-                f"This strategy requires {startup_candles} candles to start. "
-                f"{self.name} only provides {candle_limit} for {timeframe}.")
+                f"This strategy requires {startup_candles} candles to start, which is more than 5x "
+                f"the amount of candles {self.name} provides for {timeframe}.")
+
+        if required_candle_call_count > 1:
+            logger.warning(f"Using {required_candle_call_count} calls to get OHLCV. "
+                           f"This can result in slower operations for the bot. Please check "
+                           f"if you really need {startup_candles} candles for your strategy")
+        return required_candle_call_count
 
     def exchange_has(self, endpoint: str) -> bool:
         """
@@ -506,7 +536,7 @@ class Exchange:
                 precision = self.markets[pair]['precision']['price']
                 missing = price % precision
                 if missing != 0:
-                    price = price - missing + precision
+                    price = round(price - missing + precision, 10)
             else:
                 symbol_prec = self.markets[pair]['precision']['price']
                 big_price = price * pow(10, symbol_prec)
@@ -708,7 +738,8 @@ class Exchange:
 
         params = self._params.copy()
         if time_in_force != 'gtc' and ordertype != 'market':
-            params.update({'timeInForce': time_in_force})
+            param = self._ft_has.get('time_in_force_parameter', '')
+            params.update({param: time_in_force})
 
         try:
             # Set the precision for amount and price(rate) as accepted by the exchange
@@ -804,7 +835,7 @@ class Exchange:
         :param order: Order dict as returned from fetch_order()
         :return: True if order has been cancelled without being filled, False otherwise.
         """
-        return (order.get('status') in ('closed', 'canceled', 'cancelled')
+        return (order.get('status') in NON_OPEN_EXCHANGE_STATES
                 and order.get('filled') == 0.0)
 
     @retrier
@@ -1038,9 +1069,9 @@ class Exchange:
             logger.debug(f"Using Last {conf_strategy['price_side'].capitalize()} / Last Price")
             ticker = self.fetch_ticker(pair)
             ticker_rate = ticker[conf_strategy['price_side']]
-            if ticker['last']:
+            if ticker['last'] and ticker_rate:
                 if side == 'buy' and ticker_rate > ticker['last']:
-                    balance = conf_strategy['ask_last_balance']
+                    balance = conf_strategy.get('ask_last_balance', 0.0)
                     ticker_rate = ticker_rate + balance * (ticker['last'] - ticker_rate)
                 elif side == 'sell' and ticker_rate < ticker['last']:
                     balance = conf_strategy.get('bid_last_balance', 0.0)
@@ -1177,7 +1208,7 @@ class Exchange:
     # Historic data
 
     def get_historic_ohlcv(self, pair: str, timeframe: str,
-                           since_ms: int) -> List:
+                           since_ms: int, is_new_pair: bool = False) -> List:
         """
         Get candle history using asyncio and returns the list of candles.
         Handles all async work for this.
@@ -1187,9 +1218,11 @@ class Exchange:
         :param since_ms: Timestamp in milliseconds to get history from
         :return: List with candle (OHLCV) data
         """
-        return asyncio.get_event_loop().run_until_complete(
+        pair, timeframe, data = asyncio.get_event_loop().run_until_complete(
             self._async_get_historic_ohlcv(pair=pair, timeframe=timeframe,
-                                           since_ms=since_ms))
+                                           since_ms=since_ms, is_new_pair=is_new_pair))
+        logger.info(f"Downloaded data for {pair} with length {len(data)}.")
+        return data
 
     def get_historic_ohlcv_as_df(self, pair: str, timeframe: str,
                                  since_ms: int) -> DataFrame:
@@ -1204,11 +1237,13 @@ class Exchange:
         return ohlcv_to_dataframe(ticks, timeframe, pair=pair, fill_missing=True,
                                   drop_incomplete=self._ohlcv_partial_candle)
 
-    async def _async_get_historic_ohlcv(self, pair: str,
-                                        timeframe: str,
-                                        since_ms: int) -> List:
+    async def _async_get_historic_ohlcv(self, pair: str, timeframe: str,
+                                        since_ms: int, is_new_pair: bool = False,
+                                        raise_: bool = False
+                                        ) -> Tuple[str, str, List]:
         """
         Download historic ohlcv
+        :param is_new_pair: used by binance subclass to allow "fast" new pair downloading
         """
 
         one_call = timeframe_to_msecs(timeframe) * self.ohlcv_candle_limit(timeframe)
@@ -1221,22 +1256,25 @@ class Exchange:
             pair, timeframe, since) for since in
             range(since_ms, arrow.utcnow().int_timestamp * 1000, one_call)]
 
-        results = await asyncio.gather(*input_coroutines, return_exceptions=True)
-
-        # Combine gathered results
         data: List = []
-        for res in results:
-            if isinstance(res, Exception):
-                logger.warning("Async code raised an exception: %s", res.__class__.__name__)
-                continue
-            # Deconstruct tuple if it's not an exception
-            p, _, new_data = res
-            if p == pair:
-                data.extend(new_data)
+        # Chunk requests into batches of 100 to avoid overwelming ccxt Throttling
+        for input_coro in chunks(input_coroutines, 100):
+
+            results = await asyncio.gather(*input_coro, return_exceptions=True)
+            for res in results:
+                if isinstance(res, Exception):
+                    logger.warning("Async code raised an exception: %s", res.__class__.__name__)
+                    if raise_:
+                        raise
+                    continue
+                else:
+                    # Deconstruct tuple if it's not an exception
+                    p, _, new_data = res
+                    if p == pair:
+                        data.extend(new_data)
         # Sort data again after extending the result - above calls return in "async order"
         data = sorted(data, key=lambda x: x[0])
-        logger.info("Downloaded data for %s with length %s.", pair, len(data))
-        return data
+        return pair, timeframe, data
 
     def refresh_latest_ohlcv(self, pair_list: ListPairsWithTimeframes, *,
                              since_ms: Optional[int] = None, cache: bool = True
@@ -1256,10 +1294,22 @@ class Exchange:
         cached_pairs = []
         # Gather coroutines to run
         for pair, timeframe in set(pair_list):
-            if (((pair, timeframe) not in self._klines)
+            if ((pair, timeframe) not in self._klines
                     or self._now_is_time_to_refresh(pair, timeframe)):
-                input_coroutines.append(self._async_get_candle_history(pair, timeframe,
-                                                                       since_ms=since_ms))
+                if not since_ms and self.required_candle_call_count > 1:
+                    # Multiple calls for one pair - to get more history
+                    one_call = timeframe_to_msecs(timeframe) * self.ohlcv_candle_limit(timeframe)
+                    move_to = one_call * self.required_candle_call_count
+                    now = timeframe_to_next_date(timeframe)
+                    since_ms = int((now - timedelta(seconds=move_to // 1000)).timestamp() * 1000)
+
+                if since_ms:
+                    input_coroutines.append(self._async_get_historic_ohlcv(
+                        pair, timeframe, since_ms=since_ms, raise_=True))
+                else:
+                    # One call ... "regular" refresh
+                    input_coroutines.append(self._async_get_candle_history(
+                        pair, timeframe, since_ms=since_ms))
             else:
                 logger.debug(
                     "Using cached candle (OHLCV) data for pair %s, timeframe %s ...",
@@ -1514,7 +1564,7 @@ def is_exchange_known_ccxt(exchange_name: str, ccxt_module: CcxtModuleType = Non
 
 
 def is_exchange_officially_supported(exchange_name: str) -> bool:
-    return exchange_name in ['bittrex', 'binance', 'kraken']
+    return exchange_name in ['bittrex', 'binance', 'kraken', 'ftx', 'gateio', 'okex']
 
 
 def ccxt_exchanges(ccxt_module: CcxtModuleType = None) -> List[str]:

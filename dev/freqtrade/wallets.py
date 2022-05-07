@@ -238,7 +238,7 @@ class Wallets:
 
         return self._check_available_stake_amount(stake_amount, available_amount)
 
-    def _validate_stake_amount(self, pair, stake_amount, min_stake_amount):
+    def validate_stake_amount(self, pair, stake_amount, min_stake_amount):
         if not stake_amount:
             logger.debug(f"Stake amount is {stake_amount}, ignoring possible trade for {pair}.")
             return 0
@@ -250,17 +250,27 @@ class Wallets:
                 logger.warning("Minimum stake amount > available balance.")
             return 0
         if min_stake_amount is not None and stake_amount < min_stake_amount:
-            stake_amount = min_stake_amount
             if self._log:
                 logger.info(
                     f"Stake amount for pair {pair} is too small "
                     f"({stake_amount} < {min_stake_amount}), adjusting to {min_stake_amount}."
                 )
+            if stake_amount * 1.3 < min_stake_amount:
+                # Top-cap stake-amount adjustments to +30%.
+                if self._log:
+                    logger.info(
+                        f"Adjusted stake amount for pair {pair} is more than 30% bigger than "
+                        f"the desired stake ({stake_amount} * 1.3 > {max_stake_amount}), "
+                        f"ignoring trade."
+                    )
+                return 0
+            stake_amount = min_stake_amount
+
         if stake_amount > max_stake_amount:
-            stake_amount = max_stake_amount
             if self._log:
                 logger.info(
                     f"Stake amount for pair {pair} is too big "
                     f"({stake_amount} > {max_stake_amount}), adjusting to {max_stake_amount}."
                 )
+            stake_amount = max_stake_amount
         return stake_amount

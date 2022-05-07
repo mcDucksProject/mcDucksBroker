@@ -8,7 +8,6 @@ from pandas.core.frame import DataFrame
 from mcDuck.custom_indicators import merge_dataframes, stoch_rsi_smooth, klinger_oscilator
 from functools import reduce
 
-
 """
 Buys when the 1D Klinger and de 4H Klinger crosses
 """
@@ -58,8 +57,7 @@ class StrategyKlingerStoch(IStrategy):
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         if self.config['runmode'].value in ('backtest', 'hyperopt'):
-            assert (timeframe_to_minutes(self.timeframe) <=
-                    5), "Backtest this strategy in 5m or 1m timeframe."
+            assert (timeframe_to_minutes(self.timeframe) <= 5), "Backtest this strategy in 5m or 1m timeframe."
 
         if not self.dp:
             return dataframe
@@ -92,9 +90,9 @@ class StrategyKlingerStoch(IStrategy):
         conditions.append(dataframe["stochk"] > last_candle_main["stochk"])
         conditions.append((last_candle_main['main_kvo'] < last_candle_main['main_ks']) &
                           (dataframe['main_kvo'] > dataframe['main_ks']))
-        if('btc_stochk' in dataframe.columns):
+        if ('btc_stochk' in dataframe.columns):
             conditions.append(dataframe["btc_stochk"] > last_candle_main["btc_stochk"])
-        if('btc_kvo' in dataframe.columns):
+        if ('btc_kvo' in dataframe.columns):
             conditions.append(dataframe["btc_kvo"] > last_candle_support["btc_ks"])
         if conditions:
             dataframe.loc[reduce(lambda x, y: x & y, conditions), "buy"] = 1
@@ -104,11 +102,11 @@ class StrategyKlingerStoch(IStrategy):
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         last_candle_main = dataframe.shift(self.shift_value(self.timeframe_main))
         dataframe.loc[(
-            (dataframe["stochk"] < last_candle_main["stochk"]) &
-            ((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
-             (dataframe['main_kvo'] < dataframe['main_ks'])) &
-            (dataframe["volume"] > 0)
-        ), "sell"] = 0
+                          (dataframe["stochk"] < last_candle_main["stochk"]) &
+                          ((last_candle_main['main_kvo'] > last_candle_main['main_ks']) &
+                           (dataframe['main_kvo'] < dataframe['main_ks'])) &
+                          (dataframe["volume"] > 0)
+                      ), "sell"] = 0
         return dataframe
 
     def shift_value(self, timeframe: str) -> int:
