@@ -4,11 +4,11 @@
 This is a combination of strategies and configurations for the Freqtrade bot.
 For more information about Freqtrade, please visit their [documentation](https://www.freqtrade.io/).
 
-Folder | &nbsp; | &nbsp;
----- | ---- | ----
-**dev**|Development / testing of new strategies | local install
-**test** | Dry run strategies | docker
-**live** | Strategies in production | docker
+| Folder   | &nbsp;                                  | &nbsp;        |
+|----------|-----------------------------------------|---------------|
+| **dev**  | Development / testing of new strategies | local install |
+| **test** | Dry run strategies                      | docker        |
+| **live** | Strategies in production                | docker        |
 
 ## Notes
 * Each strategy should have it's own configuration

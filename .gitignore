@@ -111,3 +111,7 @@ target/
 
 #exceptions
 !*.gitkeep
+
+dev
+backtest_results
+plot
