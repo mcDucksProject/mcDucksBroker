@@ -17,7 +17,7 @@ class StrategyDoubleScalper(IStrategy):
     INTERFACE_VERSION = 2
 
     # Optimal ticker interval for the strategy.
-    timeframe = '5m'
+    timeframe = '1m'
     main_timeframe = '15m'
     support_timeframe = '12h'
     # These values can be overridden in the "ask_strategy" section in the config.
@@ -55,8 +55,8 @@ class StrategyDoubleScalper(IStrategy):
         return informative_pairs
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        if self.config['runmode'].value in ('backtest', 'hyperopt'):
-            assert (timeframe_to_minutes(self.timeframe) <= 5), "Backtest this strategy in 5m or 1m timeframe."
+        #if self.config['runmode'].value in ('backtest', 'hyperopt'):
+        #    assert (timeframe_to_minutes(self.timeframe) <= 5), "Backtest this strategy in 5m or 1m timeframe."
 
         if not self.dp:
             return dataframe
